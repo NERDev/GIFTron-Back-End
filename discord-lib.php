@@ -2,7 +2,7 @@
 
 require "oauth2-lib.php";
 
-class DiscordAPI extends OAuth2Service
+class DiscordAPI extends OAuth2Client
 {    
     function __construct($id, $secret)
     {

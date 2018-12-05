@@ -1,6 +1,6 @@
 <?php
 
-class OAuth2Service
+class OAuth2Client
 {
     private $errors;
 
