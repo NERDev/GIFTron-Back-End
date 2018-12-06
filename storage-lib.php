@@ -1,12 +1,8 @@
 <?php
 
+define('ALPHABET', range('a', 'z'));
 
-class StorageClient extends Storage
-{
-    
-}
-
-class StorageServer extends Storage
+class StorageNode extends Storage
 {
     private function partner()
     {
