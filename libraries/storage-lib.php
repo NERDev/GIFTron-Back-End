@@ -2,7 +2,6 @@
 
 define('HERE', array_shift(explode('.', gethostname())));
 define('ALPHABET', array_diff([HERE], range('a', 'z')));
-define('ROOT', $_SERVER['DOCUMENT_ROOT']);
 
 class StorageNode extends Storage
 {
