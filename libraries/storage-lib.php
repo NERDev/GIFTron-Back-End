@@ -1,13 +1,12 @@
 <?php
 
-define('ALPHABET', range('a', 'z'));
+define('HERE', array_shift(explode('.', gethostname())));
+define('ALPHABET', array_diff([HERE], range('a', 'z')));
+define('ROOT', $_SERVER['DOCUMENT_ROOT']);
 
 class StorageNode extends Storage
 {
-    private function partner()
-    {
-        //choose a partner to store a backup
-    }
+    
 
     function read()
     {
@@ -29,10 +28,20 @@ class Storage
     {
 
     }
+    
+    protected function group()
+    {
+        //choose a partner to store a backup
+        $counterfile = ROOT . "/metadata/counter";
+        $count = file_get_contents($counterfile) ?? 0;
+        $partner = ALPHABET[$count % 25];
+        file_put_contents($counterfile, ++$count);
+        return HERE . $partner;
+    }
 
     protected function local_read($query)
     {
-        json_decode(file_get_contents("$this->basedir/$query"));
+        return json_decode(file_get_contents("$this->basedir/$query"));
     }
 
     protected function local_write($query, $data)
@@ -41,6 +50,6 @@ class Storage
         array_pop($path);
         $parentdir = implode('/', $path);
         mkdir($parentdir, 0755, TRUE);
-        file_put_contents("$query", json_encode($data));
+        return file_put_contents("$query", json_encode($data));
     }
 }
