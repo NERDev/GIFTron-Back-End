@@ -29,14 +29,13 @@ class Storage
 
     }
     
-    protected function group()
+    protected function partner()
     {
         //choose a partner to store a backup
         $counterfile = ROOT . "/metadata/counter";
         $count = file_get_contents($counterfile) ?? 0;
-        $partner = ALPHABET[$count % 25];
         file_put_contents($counterfile, ++$count);
-        return HERE . $partner;
+        return ALPHABET[$count % 25];
     }
 
     protected function local_read($query)
