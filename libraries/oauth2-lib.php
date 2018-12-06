@@ -1,8 +1,6 @@
 <?php
 
-require_once "security-lib.php";
-
-class OAuth2Client extends Security
+class OAuth2Client
 {
     private $errors;
 
