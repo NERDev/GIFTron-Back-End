@@ -1,6 +1,6 @@
 <?php
 
-class OAuth2Service
+class OAuth2Client
 {
     private $errors;
 
@@ -17,7 +17,7 @@ class OAuth2Service
         }
     }
 
-    private function post($url, $data)
+    function post($url, $data)
     {
         $options = [
             'http' => [
@@ -33,7 +33,7 @@ class OAuth2Service
         return $response;
     }
 
-    private function get($url)
+    function get($url)
     {        
         $options = [
             'http' => [
@@ -62,10 +62,5 @@ class OAuth2Service
 
         $this->refreshToken = $response->refresh_token;
         return $this->accessToken = $response->access_token;
-    }
-
-    function getUserInfo()
-    {
-        return $this->get("$this->urlBase/users/@me");
     }
 }
