@@ -11,26 +11,18 @@ class StorageNode extends Storage
     {
         //read from local storage and compare to remote
         //if different, overwrite whichever is older with whichever is newer
-        if ($this->verify_familiarity($_SERVER["REMOTE_ADDR"], $_SERVER["REMOTE_HOST"]))
+        if ($this->check_whitelist($_SERVER['REMOTE_ADDR']))
         {
-            //request is trusted remote, this server must be secondary
-        }
-        else
-        {
-            //request is untrusted remote or local, must determine which
+            //request is trusted remote
         }
     }
 
     function write($location, $data)
     {
         //write to local and remote storage
-        if ($this->verify_familiarity($_SERVER["REMOTE_ADDR"], $_SERVER["REMOTE_HOST"]))
+        if ($this->check_whitelist($_SERVER['REMOTE_ADDR']))
         {
-            //request is trusted remote, this server must be secondary
-        }
-        else
-        {
-            //request is untrusted remote or local, must determine which
+            //request is trusted remote
         }
     }
 }
@@ -42,11 +34,6 @@ class Storage
     function __construct()
     {
         
-    }
-
-    protected function verify_familiarity($ip, $dns)
-    {
-        return $ip == gethostbyname($dns) && substr($dns, 1) == gethostname();
     }
     
     protected function partner()

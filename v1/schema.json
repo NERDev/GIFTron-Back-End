@@ -1,0 +1,13 @@
+{
+    "login": {
+        "methods": ["GET"]
+    },
+    "storage": {
+        "read": {
+            "methods": ["GET"]
+        },
+        "write": {
+            "methods": ["GET", "POST"]
+        }
+    }
+}
