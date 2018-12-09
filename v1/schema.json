@@ -3,6 +3,7 @@
         "methods": ["GET"]
     },
     "storage": {
+        "protected": true,
         "read": {
             "methods": ["GET"]
         },
