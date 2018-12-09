@@ -37,7 +37,8 @@ class API
 
     function login()
     {
-        $this->respond(200, $this->discordAPI->getAccessToken('authorization_code', $_GET['code']));
+        setcookie('token', $this->discordAPI->getAccessToken('authorization_code', $_GET['code']), null, '/');
+        $this->respond(200, "success");
     }
 
     function user()
