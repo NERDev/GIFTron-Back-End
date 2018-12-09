@@ -1,15 +1,55 @@
 <?php
 
+error_reporting(E_ALL); ini_set('display_errors', 1);
 define('ROOT', realpath($_SERVER['DOCUMENT_ROOT'] . '/..'));
+/*
 define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
-define('API_PATH', array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd())), 4));
 define('VERSION', preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4]);
+*/
+require "libraries/discord-lib.php";
 
-var_dump(API_PATH);
+$apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd())), 4);
 
+class API
+{
+    protected $webroot;
+    protected $phproot;
+    protected $discordAPI;
+    public $version;
 
-var_dump("hi carrot!");
+    function __construct()
+    {
+        $this->phproot  = realpath(ROOT . '/git/GIFTron/GIFTron-Back-End');
+        $this->webroot  = realpath(ROOT . '/webroot');
+        $this->version  = preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4];
+
+        $credentials = json_decode(file_get_contents("$this->phproot/metadata/credentials"));
+        $this->discordAPI = new DiscordAPI($credentials->clientId, $credentials->clientSecret);
+    }
+
+    private function respond($status, $data)
+    {
+        http_response_code($status);
+        $data = gettype($data) == "object" ? $data : (object)$data;
+        echo(json_encode($data));
+    }
+
+    function login()
+    {
+        $this->respond(200, $this->discordAPI->getAccessToken('authorization_code', $_GET['code']));
+    }
+
+    function user()
+    {
+        $this->respond(200, $this->discordAPI->getUserInfo());
+    }
+}
+
+$method = implode('-', $apipath);
+$api = new API;
+$api->$method();
+
 
 /*
 var_dump(ROOT);

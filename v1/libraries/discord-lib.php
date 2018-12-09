@@ -9,7 +9,7 @@ class DiscordAPI extends OAuth2Client
         $params = [
             'clientId'                => $id,
             'clientSecret'            => $secret,
-            'redirectUri'             => 'http://dev.api.nerdev.io/index.php',
+            'redirectUri'             => 'http://dev.nerdev.io/giftron/api/login',
             'urlBase'                 => 'https://discordapp.com/api',
             'urlAuthorize'            => 'https://discordapp.com/api/oauth2/authorize',
             'urlAccessToken'          => 'https://discordapp.com/api/oauth2/token'

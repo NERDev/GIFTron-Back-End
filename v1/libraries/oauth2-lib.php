@@ -34,10 +34,12 @@ class OAuth2Client
     }
 
     function get($url)
-    {        
+    {
+        $token = $this->accessToken ?? $_GET['token'];
+
         $options = [
             'http' => [
-                "header" => "Authorization: Bearer {$this->accessToken}\r\n"
+                "header" => "Authorization: Bearer {$token}\r\n"
             ]
         ];
 
