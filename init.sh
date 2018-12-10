@@ -32,6 +32,7 @@ systemctl restart php72-php-fpm.service
 cd /etc/nginx
 mv nginx.conf nginx.conf.backup
 wget http://github.com/christian-kramer/qdstore/raw/master/nginx.conf
+mkdir /usr/share/NERDev/
 cd /usr/share/NERDev/
 mkdir webroot
 mkdir git
