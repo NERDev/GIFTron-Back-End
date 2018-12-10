@@ -38,6 +38,7 @@ mkdir webroot
 mkdir git
 mkdir data
 cd ../
+pwd
 chown nginx:nginx webroot -R
 systemctl restart nginx
 systemctl enable nginx
