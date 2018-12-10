@@ -31,7 +31,7 @@ sed -i 's/group = apache/group = nginx/g' /etc/opt/remi/php72/php-fpm.d/www.conf
 systemctl restart php72-php-fpm.service
 cd /etc/nginx
 mv nginx.conf nginx.conf.backup
-wget http://github.com/christian-kramer/qdstore/raw/master/nginx.conf
+wget https://raw.githubusercontent.com/NERDev/GIFTron-Back-End/master/nginx.conf
 mkdir /usr/share/NERDev/
 cd /usr/share/NERDev/
 mkdir webroot
