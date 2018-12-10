@@ -7,22 +7,54 @@ class StorageNode extends Storage
 {
     
 
-    function read()
+    function read($location)
     {
         //read from local storage and compare to remote
         //if different, overwrite whichever is older with whichever is newer
-        if ($this->check_whitelist($_SERVER['REMOTE_ADDR']))
+        $server0 = $location[0];
+        $server1 = $location[1];
+
+        $primary = HERE == $server0;
+        $secondary = HERE == $secondary;
+
+        if ($primary)
         {
-            //request is trusted remote
+            //get contents of location, compare to secondary
+        }
+
+        if ($secondary)
+        {
+            //get contents of location
+        }
+
+        if (!$secondary && !$primary)
+        {
+            //this must be the remote server, handle the request to the primary to get the ball rolling
         }
     }
 
     function write($location, $data)
     {
         //write to local and remote storage
-        if ($this->check_whitelist($_SERVER['REMOTE_ADDR']))
+        $server0 = $location[0];
+        $server1 = $location[1];
+
+        $primary = HERE == $server0;
+        $secondary = HERE == $secondary;
+
+        if ($primary)
         {
-            //request is trusted remote
+            //write locally and remotely
+        }
+
+        if ($secondary)
+        {
+            //write locally
+        }
+
+        if (!$secondary && !$primary)
+        {
+            //this must be the remote server, handle the request to the primary to get the ball rolling
         }
     }
 }
@@ -57,5 +89,15 @@ class Storage
         $parentdir = implode('/', $path);
         mkdir($parentdir, 0755, TRUE);
         return file_put_contents("$query", json_encode($data));
+    }
+
+    protected function remote_read()
+    {
+        //call API for read
+    }
+
+    protected function remote_write()
+    {
+        //call API for write
     }
 }

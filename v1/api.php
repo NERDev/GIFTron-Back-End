@@ -1,17 +1,18 @@
 <?php
 
 error_reporting(E_ALL); ini_set('display_errors', 1);
-define('ROOT', realpath($_SERVER['DOCUMENT_ROOT'] . '/..'));
 /*
 define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
 define('VERSION', preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4]);
 */
-require "libraries/discord-lib.php";
+require_once "libraries/security-lib.php";
+require_once "libraries/discord-lib.php";
+require_once "libraries/storage-lib.php";
 
 $apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd())), 4);
 
-class API
+class APIhost extends Security
 {
     protected $webroot;
     protected $phproot;
@@ -20,10 +21,7 @@ class API
 
     function __construct()
     {
-        $this->phproot  = realpath(ROOT . '/git/GIFTron/GIFTron-Back-End');
-        $this->webroot  = realpath(ROOT . '/webroot');
-        $this->version  = preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4];
-
+        parent::__construct();
         $credentials = json_decode(file_get_contents("$this->phproot/metadata/credentials"));
         $this->discordAPI = new DiscordAPI($credentials->clientId, $credentials->clientSecret);
     }
@@ -32,23 +30,39 @@ class API
     {
         http_response_code($status);
         $data = gettype($data) == "object" ? $data : (object)$data;
-        echo(json_encode($data));
+        exit(json_encode($data));
     }
 
     function login()
     {
+        $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
         setcookie('token', $this->discordAPI->getAccessToken('authorization_code', $_GET['code']), null, '/');
         $this->respond(200, "success");
+        $storageapi->read('stuff');
     }
 
     function user()
     {
         $this->respond(200, $this->discordAPI->getUserInfo());
     }
+
+    function storage_read()
+    {
+        $this->trusted_server() ?: $this->respond(400, "Untrusted Origin");
+        $storageapi = new StorageNode;
+        $this->respond(200, $storageapi->read($_SERVER['QUERY_STRING']));
+    }
+
+    function storage_write()
+    {
+        $this->trusted_server() ?: $this->respond(400, "Untrusted Origin");
+        $storageapi = new StorageNode;
+        $this->respond(200, $storageapi->write($_SERVER['QUERY_STRING'], json_decode($_POST)));
+    }
 }
 
-$method = implode('-', $apipath);
-$api = new API;
+$method = implode('_', $apipath);
+$api = new APIhost;
 $api->$method();
 
 
