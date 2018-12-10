@@ -1,12 +1,27 @@
 <?php
 
-define('ROOT', $_SERVER['DOCUMENT_ROOT']);
+define('ROOT', realpath($_SERVER['DOCUMENT_ROOT'] . '/..'));
 
 class Security
 {
-    function check_whitelist($ip)
+    private $whitelist;
+
+    function __construct()
     {
-        $whitelist = json_decode(file_get_contents("ROOT"));
-        return in_array($ip, $whitelist);
+        $this->phproot  = realpath(ROOT . '/git/GIFTron/GIFTron-Back-End');
+        $this->webroot  = realpath(ROOT . '/webroot');
+        $this->version  = preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4];
+        $this->whitelist = json_decode(file_get_contents("$this->phproot/metadata/whitelist"));
+    }
+
+    function trusted_server($ip)
+    {
+        return in_array($ip, $this->whitelist);
+    }
+
+    function require_methods($methods)
+    {
+        $methods = gettype($methods) == "string" ? $methods : [$methods];
+        return in_array($_SERVER['REQUEST_METHOD'], $methods);
     }
 }
