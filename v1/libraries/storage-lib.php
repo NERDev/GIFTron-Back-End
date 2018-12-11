@@ -74,7 +74,7 @@ class Storage
         $counterfile = ROOT . "/metadata/counter";
         $count = file_get_contents($counterfile) ?? 0;
         file_put_contents($counterfile, ++$count);
-        return ALPHABET[$count % 25];
+        return ALPHABET[$count % (count(ALPHABET) - 1)];
     }
 
     protected function local_read($query)
