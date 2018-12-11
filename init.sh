@@ -22,6 +22,10 @@ echo 'Installing wget'
 yum -y install wget
 echo 'Installing nginx'
 yum -y install nginx
+echo 'Adding nginx rule to firewall'
+sudo firewall-cmd --permanent --zone=public --add-service=http
+sudo firewall-cmd --permanent --zone=public --add-service=https
+sudo firewall-cmd --reload
 echo 'Configuring PHP for nginx'
 systemctl enable php72-php-fpm.service
 systemctl start php72-php-fpm.service
