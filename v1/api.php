@@ -38,7 +38,6 @@ class APIhost extends Security
         $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
         setcookie('token', $this->discordAPI->getAccessToken('authorization_code', $_GET['code']), null, '/');
         $this->respond(200, "success");
-        $storageapi->read('stuff');
     }
 
     function user()
@@ -61,9 +60,27 @@ class APIhost extends Security
     }
 }
 
-$method = implode('_', $apipath);
-$api = new APIhost;
-$api->$method();
+function build()
+{
+    echo "build function reached\n";
+    $schema = json_decode(file_get_contents("schema.json"));
+    foreach($schema as $name => $properties)
+    {
+        var_dump($name, $properties);
+    }
+}
+
+if (function_exists($argv[1]))
+{
+    $argv[1]();
+}
+else
+{
+    $method = implode('_', $apipath);
+    $api = new APIhost;
+    $api->$method();
+}
+
 
 
 /*

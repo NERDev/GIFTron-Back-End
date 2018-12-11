@@ -46,3 +46,6 @@ systemctl restart nginx
 systemctl enable nginx
 cd git
 git clone https://github.com/NERDev/GIFTron-Back-End.git
+echo 'Bootstrapping this machine...'
+cd GIFTron-Back-End/v1
+php72 api.php build
