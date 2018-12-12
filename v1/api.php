@@ -62,12 +62,35 @@ class APIhost extends Security
 
 function build()
 {
-    echo "build function reached\n";
-    $schema = json_decode(file_get_contents("schema.json"));
-    foreach($schema as $name => $properties)
+    function recurse($struct, $parent = null)
     {
-        var_dump($name, $properties);
+        $apiroot = realpath("../../../../webroot/giftron/api/v1");
+        foreach($struct as $name => $properties)
+        {
+            var_dump(getcwd());
+            chdir($parent ?? $apiroot);
+
+            if (gettype($properties) == "object")
+            {
+                mkdir($name);
+                if ($properties->methods)
+                {
+                    var_dump("$name is an endpoint inside $parent");
+                }
+                else
+                {
+                    var_dump("$name is not an endpoint inside $parent");
+                    recurse($properties, $name);
+                }
+            }
+        }
     }
+    
+    echo "building API tree\n";
+    $seed = file_get_contents("seed.php");
+    $schema = json_decode(file_get_contents("schema.json"));
+    chdir(realpath("../../../../webroot/giftron/api/v1"));
+    recurse($schema);
 }
 
 if (function_exists($argv[1]))
