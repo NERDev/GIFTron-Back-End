@@ -76,6 +76,7 @@ function build()
                 if ($properties->methods)
                 {
                     var_dump("$name is an endpoint inside $parent");
+                    file_put_contents("$name/index.php", $GLOBALS['seed']);
                 }
                 else
                 {
@@ -87,7 +88,7 @@ function build()
     }
     
     echo "building API tree\n";
-    $seed = file_get_contents("seed.php");
+    $GLOBALS['seed'] = file_get_contents("seed.php");
     $schema = json_decode(file_get_contents("schema.json"));
     chdir(realpath("../../../../webroot/giftron/api/v1"));
     recurse($schema);
