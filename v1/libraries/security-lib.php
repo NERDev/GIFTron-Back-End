@@ -21,7 +21,7 @@ class Security
 
     function require_methods($methods)
     {
-        $methods = gettype($methods) == "string" ? $methods : [$methods];
+        $methods = gettype($methods) == "array" ? $methods : [$methods];
         return in_array($_SERVER['REQUEST_METHOD'], $methods);
     }
 }
