@@ -1,6 +1,6 @@
 <?php
 
-error_reporting(E_ALL); ini_set('display_errors', 1);
+//error_reporting(E_ALL); ini_set('display_errors', 1);
 /*
 define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
@@ -10,7 +10,7 @@ require_once "libraries/security-lib.php";
 require_once "libraries/discord-lib.php";
 require_once "libraries/storage-lib.php";
 
-$apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd())), 4);
+$apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd())), 5);
 
 class APIhost extends Security
 {
@@ -40,9 +40,21 @@ class APIhost extends Security
         $this->respond(200, "success");
     }
 
-    function user()
+    function user_info()
     {
         $this->respond(200, $this->discordAPI->getUserInfo());
+    }
+
+    function user_guilds()
+    {
+        if (is_numeric($_SERVER['QUERY_STRING']))
+        {
+            $guilds = $this->discordAPI->getUserGuilds();
+
+            $this->discordAPI->list_permissions($_SERVER['QUERY_STRING']);
+            $this->respond(200, $this->discordAPI->list_permissions($_SERVER['QUERY_STRING']));
+        }
+        $this->respond(200, $this->discordAPI->getUserGuilds());
     }
 
     function storage_read()
@@ -67,7 +79,6 @@ function build()
         $apiroot = realpath("../../../../webroot/giftron/api/v1");
         foreach($struct as $name => $properties)
         {
-            var_dump(getcwd());
             chdir($parent ?? $apiroot);
 
             if (gettype($properties) == "object")
@@ -75,12 +86,10 @@ function build()
                 mkdir($name);
                 if ($properties->methods)
                 {
-                    var_dump("$name is an endpoint inside $parent");
                     file_put_contents("$name/index.php", $GLOBALS['seed']);
                 }
                 else
                 {
-                    var_dump("$name is not an endpoint inside $parent");
                     recurse($properties, $name);
                 }
             }
