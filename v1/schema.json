@@ -2,6 +2,19 @@
     "login": {
         "methods": ["GET"]
     },
+    "user": {
+        "info": {
+            "methods": ["GET"]
+        },
+        "guilds": {
+            "methods": ["GET"]
+        }
+    },
+    "schedule": {
+        "new": {
+            "methods": ["GET"]
+        }
+    },
     "storage": {
         "protected": true,
         "read": {
