@@ -1,6 +1,11 @@
 <?php
 
 define('ROOT', realpath($_SERVER['DOCUMENT_ROOT'] . '/..'));
+define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
+define('WEBROOT', realpath(ROOT . '/webroot'));
+define('VERSION', preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4]);
+
+//add defines for phproot, webroot, version, and whitelist
 
 class Security
 {
@@ -8,9 +13,12 @@ class Security
 
     function __construct()
     {
-        $this->phproot  = realpath(ROOT . '/git/GIFTron/GIFTron-Back-End');
-        $this->webroot  = realpath(ROOT . '/webroot');
-        $this->version  = preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4];
+        //$this->phproot  = realpath(ROOT . '/git/GIFTron/GIFTron-Back-End');
+        //$this->webroot  = realpath(ROOT . '/webroot');
+        //$this->version  = preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4];
+        $this->phproot = PHPROOT;
+        $this->webroot = WEBROOT;
+        $this->version = VERSION;
         $this->whitelist = json_decode(file_get_contents("$this->phproot/metadata/whitelist"));
     }
 
