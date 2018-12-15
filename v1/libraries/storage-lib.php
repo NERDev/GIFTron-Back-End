@@ -20,20 +20,62 @@ class StorageNode extends Storage
         if ($primary)
         {
             //get contents of location, compare to secondary
-            var_dump("this is the primary server: " . HERE, file_get_contents("http://$server1.dev.nerdev.io/giftron/api/v1/storage/read?$location"));
+            $local = $this->local_read($location);
+            $remote = json_decode(file_get_contents("http://$server1.dev.nerdev.io" . $_SERVER['REQUEST_URI']));
+
+            if ($local && $remote)
+            {
+                //got a valid response from both servers, compare hashes
+                if (!$local->hash || $remote->hash)
+                {
+                    //a hash is missing, handle
+                }
+
+                if ($local->hash != $remote->hash)
+                {
+                    //discrepancy, over-write whichever is older
+                }
+
+                if ($local->hash == $remote->hash)
+                {
+                    //success, everything checks out
+                    return $local;
+                }
+            }
+
+            if (!$local || !$remote)
+            {
+                //one of them screwed up... figure out which
+                if (!$local && !$remote)
+                {
+                    //shit's broke, fam
+                    return "oshit";
+                }
+
+                if (!$local && $remote)
+                {
+                    //local is blank, write remote locally
+                }
+
+                if ($local && !$remote)
+                {
+                    //remote is blank, write local remotely
+                }
+            }
+
+            return (object)["error" => "unknown error, this shouldn't have happened"];
         }
 
         if ($secondary)
         {
             //get contents of location
-            var_dump("this is the secondary server: " . HERE);
+            return $this->local_read($location);
         }
 
         if (!$secondary && !$primary)
         {
             //this must be the remote server, handle the request to the primary to get the ball rolling
-            var_dump("this is the remote server", file_get_contents("http://$server0.dev.nerdev.io/giftron/api/v1/storage/read?$location"));
-            
+            return file_get_contents("http://$server0.dev.nerdev.io/giftron/api/v1/storage/read?$location");
         }
     }
 
@@ -87,7 +129,8 @@ class Storage
 
     protected function local_read($query)
     {
-        return json_decode(file_get_contents("$this->basedir/$query"));
+        $data = json_decode(file_get_contents("$this->basedir/$query"));
+        return (object)["data" => $data, "hash" => md5(json_encode($data)), "time" => filectime("$this->basedir/$query")];
     }
 
     protected function local_write($query, $data)

@@ -1,6 +1,6 @@
 <?php
 
-error_reporting(E_ALL); ini_set('display_errors', 1);
+//error_reporting(E_ALL); ini_set('display_errors', 1);
 /*
 define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
@@ -30,8 +30,9 @@ class APIhost extends Security
     private function respond($status, $data)
     {
         http_response_code($status);
-        $data = gettype($data) == "object" ? $data : (object)$data;
-        exit(json_encode($data));
+        //$data = gettype($data) == "object" ? $data : (object)$data;
+        $data = json_decode($data) ? $data : json_encode($data);
+        exit($data);
     }
 
     function login()
@@ -60,7 +61,7 @@ class APIhost extends Security
 
     function schedule_new()
     {
-        $this->storageAPI->read('ab4280');
+        $this->respond(200, $this->storageAPI->read('ab4280'));
     }
 
     function storage_read()
