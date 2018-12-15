@@ -38,13 +38,13 @@ mv nginx.conf nginx.conf.backup
 wget https://raw.githubusercontent.com/NERDev/GIFTron-Back-End/master/nginx.conf
 mkdir /usr/share/NERDev/
 cd /usr/share/NERDev/
-mkdir webroot
-mkdir git
+mkdir -p webroot/giftron/api/v1
+mkdir -p git/GIFTron
 mkdir data
-chown nginx:nginx webroot -R
+#chown nginx:nginx webroot -R
 systemctl restart nginx
 systemctl enable nginx
-cd git
+cd git/GIFTron
 git clone https://github.com/NERDev/GIFTron-Back-End.git
 echo 'Bootstrapping this machine...'
 cd GIFTron-Back-End/v1
