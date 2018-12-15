@@ -20,13 +20,13 @@ class StorageNode extends Storage
         if ($primary)
         {
             //get contents of location, compare to secondary
-            var_dump("this is the primary server", file_get_contents("http://$server1.dev.nerdev.io/giftron/api/v1/storage/read?$location"));
+            var_dump("this is the primary server: " . HERE, file_get_contents("http://$server1.dev.nerdev.io/giftron/api/v1/storage/read?$location"));
         }
 
         if ($secondary)
         {
             //get contents of location
-            var_dump("this is the secondary server");
+            var_dump("this is the secondary server: " . HERE);
         }
 
         if (!$secondary && !$primary)
