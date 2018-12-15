@@ -1,6 +1,6 @@
 <?php
 
-//error_reporting(E_ALL); ini_set('display_errors', 1);
+error_reporting(E_ALL); ini_set('display_errors', 1);
 /*
 define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
@@ -24,6 +24,7 @@ class APIhost extends Security
         parent::__construct();
         $credentials = json_decode(file_get_contents("$this->phproot/metadata/credentials"));
         $this->discordAPI = new DiscordAPI($credentials->clientId, $credentials->clientSecret);
+        $this->storageAPI = new StorageNode;
     }
 
     private function respond($status, $data)
@@ -57,16 +58,20 @@ class APIhost extends Security
         $this->respond(200, $this->discordAPI->getUserGuilds());
     }
 
+    function schedule_new()
+    {
+        $this->storageAPI->read('ab4280');
+    }
+
     function storage_read()
     {
-        $this->trusted_server() ?: $this->respond(400, "Untrusted Origin");
-        $storageapi = new StorageNode;
-        $this->respond(200, $storageapi->read($_SERVER['QUERY_STRING']));
+        $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
+        $this->respond(200, $this->storageAPI->read($_SERVER['QUERY_STRING']));
     }
 
     function storage_write()
     {
-        $this->trusted_server() ?: $this->respond(400, "Untrusted Origin");
+        $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
         $storageapi = new StorageNode;
         $this->respond(200, $storageapi->write($_SERVER['QUERY_STRING'], json_decode($_POST)));
     }
