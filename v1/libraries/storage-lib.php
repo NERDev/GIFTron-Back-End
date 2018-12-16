@@ -79,7 +79,7 @@ class StorageNode extends Storage
         }
     }
 
-    function write($location, $data)
+    function write($location, $data, $partnered = false)
     {
         //write to local and remote storage
         $server0 = $location[0];
@@ -91,7 +91,7 @@ class StorageNode extends Storage
         if ($primary)
         {
             //write locally and remotely
-            echo "primary reached";
+            return "kek";
         }
 
         if ($secondary)
@@ -103,8 +103,9 @@ class StorageNode extends Storage
         if (!$secondary && !$primary)
         {
             //this must be the remote server, handle the request to the primary to get the ball rolling
+            //delegate server pair unless $partnered is already set
             $partner = $this->partner();
-            echo "chose $partner as partner";
+            return $this->remote_write("http://$server0.dev.nerdev.io/giftron/api/v1/storage/write/?$location", $data);
         }
     }
 }
@@ -127,6 +128,24 @@ class Storage
         return ALPHABET[$count % (count(ALPHABET))];
     }
 
+    protected function hash($id)
+    {
+        $hash = md5('521130623750897694');
+        if (is_numeric($hash))
+        {
+            return ALPHABET[$hash[0]] . ALPHABET[$hash[1]];
+        }
+        else
+        {
+            return preg_replace('/[0-9]+/', '', $hash);
+        }
+    }
+
+    protected function unhash($hash)
+    {
+        //inverse of hash()
+    }
+
     protected function local_read($query)
     {
         $data = json_decode(file_get_contents("$this->basedir/$query"));
@@ -138,8 +157,8 @@ class Storage
         $path = explode($query);
         array_pop($path);
         $parentdir = implode('/', $path);
-        mkdir($parentdir, 0755, TRUE);
-        return file_put_contents("$query", json_encode($data));
+        mkdir("$this->basedir/$parentdir", 0755, TRUE);
+        return file_put_contents("$this->basedir/$query", json_encode($data));
     }
 
     protected function remote_read()
@@ -147,8 +166,20 @@ class Storage
         //call API for read
     }
 
-    protected function remote_write()
+    protected function remote_write($url, $data)
     {
         //call API for write
+        $options = [
+            'http' => [
+                'header'  => "Content-Type: application/json\r\n",
+                'method'  => 'POST',
+                'content' => json_encode($data),
+            ]
+        ];
+
+        $context  = stream_context_create($options);
+        $raw_response = file_get_contents($url, false, $context);
+        //$response = json_decode($raw_response);
+        return $raw_response;
     }
 }
