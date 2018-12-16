@@ -1,6 +1,6 @@
 <?php
 
-//error_reporting(E_ALL); ini_set('display_errors', 1);
+error_reporting(E_ALL); ini_set('display_errors', 1);
 /*
 define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
@@ -38,6 +38,16 @@ class APIhost extends Security
     function login()
     {
         $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
+
+        //Verify that user has logged in successfully, and didn't forge a code
+
+        if ($_GET['guild_id'])
+        {
+            //This user logged in, and also added the bot to a server.
+            //Check if bot has already been added, or if this server even exists.
+            //Also, check if this bot has the permissions it needs in order to function
+        }
+
         setcookie('token', $this->discordAPI->getAccessToken('authorization_code', $_GET['code']), null, '/');
         $this->respond(200, "success");
     }
@@ -61,7 +71,12 @@ class APIhost extends Security
 
     function schedule_new()
     {
-        $this->respond(200, $this->storageAPI->read('ab4280'));
+        $this->respond(200, $this->storageAPI->write('users/ab4281', ["kek" => "stuff"]));
+    }
+
+    function storage_check()
+    {
+        //simply check if file exists
     }
 
     function storage_read()
@@ -119,29 +134,3 @@ else
     $api = new APIhost;
     $api->$method();
 }
-
-
-
-/*
-var_dump(ROOT);
-var_dump(PHPROOT);
-var_dump(WEBROOT);
-var_dump(__FILE__);
-
-$schema = json_decode(file_get_contents(PHPROOT . '/' . VERSION . "/schema.json"));
-
-var_dump($schema);
-
-
-//var_dump($version);
-
-//require_once ROOT . "v1-libraries/discord-lib.php";
-
-
-//build API based on schema
-
-/*
-var_dump(ROOT . "/v1/schema.json");
-var_dump(file_exists(ROOT . "/v1/schema.json"));
-
-var_dump(json_decode(file_get_contents(ROOT . "/v1/schema.json")));
