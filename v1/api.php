@@ -1,6 +1,6 @@
 <?php
 
-error_reporting(E_ALL); ini_set('display_errors', 1);
+//error_reporting(E_ALL); ini_set('display_errors', 1);
 /*
 define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
@@ -71,6 +71,8 @@ class APIhost extends Security
 
     function schedule_new()
     {
+        //$this->respond(200, $this->discordAPI->getGuildInfo($_GET['id']));
+        //$this->respond(200, $this->discordAPI->getBotGuilds());
         $this->respond(200, $this->storageAPI->write('users/ab4281', ["kek" => "stuff"]));
     }
 
