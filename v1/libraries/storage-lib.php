@@ -86,18 +86,18 @@ class StorageNode extends Storage
         $server1 = $location[1];
 
         $primary = HERE == $server0;
-        $secondary = HERE == $secondary;
+        $secondary = HERE == $server1;
 
         if ($primary)
         {
             //write locally and remotely
-            return "kek";
+            return $this->remote_write("http://$server1.dev.nerdev.io" . $_SERVER['REQUEST_URI'], $data);
         }
 
         if ($secondary)
         {
             //write locally
-            echo "secondary reached";
+            return "secondary reached";
         }
 
         if (!$secondary && !$primary)
@@ -137,6 +137,7 @@ class Storage
         }
         else
         {
+            //select 2 letters
             return preg_replace('/[0-9]+/', '', $hash);
         }
     }
