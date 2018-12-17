@@ -35,27 +35,25 @@ class StorageNode extends Storage
         $primary = HERE == $server0;
         $secondary = HERE == $server1;
 
-        if ($primary)
-        {
-            //write locally and remotely
-            $this->local_write($location, $data);
-            return $this->remote_write("http://$server1.dev.nerdev.io" . $_SERVER['REQUEST_URI'], $data);
-        }
-
-        if ($secondary)
-        {
-            //write locally
-            $this->local_write($location, $data);
-            return "secondary reached, chain was: $server0$server1... verification: " . HERE;
-        }
-
         if (!$secondary && !$primary)
         {
             //this must be the remote server, handle the request to the primary to get the ball rolling
             //delegate server pair unless $partnered is already set
-            $partner = $this->partner();
-            return $this->remote_write("http://$server0.dev.nerdev.io/giftron/api/v1/storage/write/?$location", $data);
+            //$partner = $this->partner();
+            $receipt0 = json_decode($this->remote_write("http://$server0.dev.nerdev.io/giftron/api/v1/storage/write/?$location", $data));
+            $receipt1 = json_decode($this->remote_write("http://$server1.dev.nerdev.io/giftron/api/v1/storage/write/?$location", $data));
+
+            if (!$receipt0->hash || !$receipt1->hash)
+            {
+                return "something went wrong";
+            }
+            else
+            {
+                return $receipt0;
+            }
         }
+
+        return $this->local_write($location, $data);
     }
 }
 
@@ -164,10 +162,12 @@ class Storage
     protected function local_write($query, $data)
     {
         $path = explode('/', $query);
-        array_pop($path);
+        $id = array_pop($path);
         $parentdir = HERE . implode('/', $path);
         mkdir("$this->basedir/$parentdir", 0755, TRUE);
-        return file_put_contents("$this->basedir/" . HERE . "/$query", json_encode($data));
+        $jsondata = json_encode($data);
+        file_put_contents("$this->basedir/" . HERE . "/$query", $jsondata);
+        return ["id" => $id, "hash" => md5($jsondata)];
     }
 
     protected function remote_read()
