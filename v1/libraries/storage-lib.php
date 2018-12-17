@@ -85,7 +85,10 @@ class Storage
             {
                 if ($server0result->hash != $server1result->hash)
                 {
-                    //discrepancy, over-write whichever is older
+                    //discrepancy, throw out data that's old
+                    $servertimes = [$server0result->time, $server1result->time];
+                    $var = "server" . array_search(max($servertimes), $servertimes) . "result";
+                    unset($$var->data);
                 }
 
                 if ($server0result->hash == $server1result->hash)
