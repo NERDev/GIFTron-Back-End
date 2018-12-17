@@ -16,67 +16,14 @@ class StorageNode extends Storage
 
         $primary = HERE == $server0;
         $secondary = HERE == $server1;
-
-        if ($primary)
-        {
-            //get contents of location, compare to secondary
-            $local = $this->local_read($location);
-            $remote = json_decode(file_get_contents("http://$server1.dev.nerdev.io" . $_SERVER['REQUEST_URI']));
-
-            if ($local && $remote)
-            {
-                //got a valid response from both servers, compare hashes
-                if (!$local->hash || $remote->hash)
-                {
-                    //a hash is missing, handle
-                }
-
-                if ($local->hash != $remote->hash)
-                {
-                    //discrepancy, over-write whichever is older
-                }
-
-                if ($local->hash == $remote->hash)
-                {
-                    //success, everything checks out
-                    return $local;
-                }
-            }
-
-            if (!$local || !$remote)
-            {
-                //one of them screwed up... figure out which
-                if (!$local && !$remote)
-                {
-                    //shit's broke, fam
-                    return "oshit";
-                }
-
-                if (!$local && $remote)
-                {
-                    //local is blank, write remote locally
-                }
-
-                if ($local && !$remote)
-                {
-                    //remote is blank, write local remotely
-                }
-            }
-            var_dump("http://$server1.dev.nerdev.io" . $_SERVER['REQUEST_URI']);
-            return (object)["error" => "unknown error, this shouldn't have happened"];
-        }
-
-        if ($secondary)
-        {
-            //get contents of location
-            return $this->local_read($location);
-        }
-
+        
         if (!$secondary && !$primary)
         {
-            //this must be the remote server, handle the request to the primary to get the ball rolling
-            return file_get_contents("http://$server0.dev.nerdev.io/giftron/api/v1/storage/read?$location");
+            //this must be the remote server
+            return $this->mediate($server0, $server1, $location);
         }
+
+        return $this->local_read($location);
     }
 
     function write($location, $data, $partnered = false)
@@ -120,6 +67,59 @@ class Storage
     {
         
     }
+
+    protected function mediate($server0, $server1, $location)
+    {
+        $readurl = ".dev.nerdev.io/giftron/api/v1/storage/read?";
+        $writeurl = ".dev.nerdev.io/giftron/api/v1/storage/write/?";
+        $server0raw = file_get_contents("http://$server0$readurl$location");
+        $server0result = json_decode($server0raw);
+
+        $server1raw = file_get_contents("http://$server1$readurl$location");
+        $server1result = json_decode($server1raw);
+
+        if ($server0result && $server1result)
+        {
+            //got a valid response from both servers, compare hashes
+            if ($server0result->hash && $server1result->hash)
+            {
+                if ($server0result->hash != $server1result->hash)
+                {
+                    //discrepancy, over-write whichever is older
+                }
+
+                if ($server0result->hash == $server1result->hash)
+                {
+                    //success, everything checks out
+                    return $server0result;
+                }
+            }            
+        }
+
+        if (!$server0result->data || !$server1result->data)
+        {
+            //one of them screwed up... figure out which
+            if (!$server0result->data && !$server1result->data)
+            {
+                //shit's broke, fam
+                return "oshit";
+            }
+
+            if (!$server0result->data && $server1result->data)
+            {
+                //local is blank, write remote locally
+                $this->remote_write("http://$server0$writeurl$location", $server1result->data);
+                return $server1result;
+            }
+
+            if ($server0result->data && !$server1result->data)
+            {
+                //remote is blank, write local remotely
+                $this->remote_write("http://$server0$writeurl$location", $server0result->data);
+                return $server0result;
+            }
+        }
+    }
     
     protected function partner()
     {
@@ -151,6 +151,7 @@ class Storage
 
     protected function local_read($query)
     {
+        //add location and id to return parameters
         $data = json_decode(file_get_contents("$this->basedir/" . HERE . "/$query"));
         $encodeddata = json_encode($data);
         $hash = $data ? md5($encodeddata) : null;
