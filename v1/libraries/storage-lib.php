@@ -62,7 +62,7 @@ class StorageNode extends Storage
                     //remote is blank, write local remotely
                 }
             }
-
+            var_dump("http://$server1.dev.nerdev.io" . $_SERVER['REQUEST_URI']);
             return (object)["error" => "unknown error, this shouldn't have happened"];
         }
 
@@ -91,6 +91,7 @@ class StorageNode extends Storage
         if ($primary)
         {
             //write locally and remotely
+            $this->local_write($location, $data);
             return $this->remote_write("http://$server1.dev.nerdev.io" . $_SERVER['REQUEST_URI'], $data);
         }
 
@@ -150,19 +151,19 @@ class Storage
 
     protected function local_read($query)
     {
-        $data = json_decode(file_get_contents("$this->basedir/$query"));
+        $data = json_decode(file_get_contents("$this->basedir/" . HERE . "/$query"));
         $encodeddata = json_encode($data);
         $hash = $data ? md5($encodeddata) : null;
-        return (object)["data" => $data, "hash" => $hash, "time" => filectime("$this->basedir/$query")];
+        return (object)["data" => $data, "hash" => $hash, "time" => filectime("$this->basedir/" . HERE . "/$query")];
     }
 
     protected function local_write($query, $data)
     {
-        $path = explode($query);
+        $path = explode('/', $query);
         array_pop($path);
-        $parentdir = implode('/', $path);
+        $parentdir = HERE . implode('/', $path);
         mkdir("$this->basedir/$parentdir", 0755, TRUE);
-        return file_put_contents("$this->basedir/$query", json_encode($data));
+        return file_put_contents("$this->basedir/" . HERE . "/$query", json_encode($data));
     }
 
     protected function remote_read()
