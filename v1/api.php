@@ -74,7 +74,6 @@ class APIhost extends Security
         //$this->respond(200, $this->discordAPI->getGuildInfo($_GET['id']));
         //$this->respond(200, $this->discordAPI->getBotGuilds());
         //$this->respond(200, $this->storageAPI->write('ab4281', ["kek" => "stuff"]));
-        ;
         $this->respond(200, ["write transaction" => $this->storageAPI->write('ab4280', ["kek" => "ayylmao", "things" => ["stuff", "otherstuff"]]), "read transaction" => $this->storageAPI->read('ab4280')]);
     }
 
