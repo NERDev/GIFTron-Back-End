@@ -115,7 +115,7 @@ class Storage
             if ($server0result->data && !$server1result->data)
             {
                 //remote is blank, write local remotely
-                $this->remote_write("http://$server0$writeurl$location", $server0result->data);
+                $this->remote_write("http://$server1$writeurl$location", $server0result->data);
                 return $server0result;
             }
         }
