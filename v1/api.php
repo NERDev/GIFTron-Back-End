@@ -73,7 +73,8 @@ class APIhost extends Security
     {
         //$this->respond(200, $this->discordAPI->getGuildInfo($_GET['id']));
         //$this->respond(200, $this->discordAPI->getBotGuilds());
-        $this->respond(200, $this->storageAPI->write('users/ab4281', ["kek" => "stuff"]));
+        //$this->respond(200, $this->storageAPI->write('ab4281', ["kek" => "stuff"]));
+        $this->respond(200, $this->storageAPI->write('test/ab4280', ["kek" => "ayylmao", "things" => ["stuff", "otherstuff"]]));
     }
 
     function storage_check()
@@ -91,7 +92,7 @@ class APIhost extends Security
     {
         $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
         $storageapi = new StorageNode;
-        $this->respond(200, $storageapi->write($_SERVER['QUERY_STRING'], json_decode($_POST)));
+        $this->respond(200, $storageapi->write($_SERVER['QUERY_STRING'], json_decode(file_get_contents("php://input"), true)));
     }
 }
 

@@ -97,7 +97,8 @@ class StorageNode extends Storage
         if ($secondary)
         {
             //write locally
-            return "secondary reached";
+            $this->local_write($location, $data);
+            return "secondary reached, chain was: $server0$server1... verification: " . HERE;
         }
 
         if (!$secondary && !$primary)
@@ -150,7 +151,9 @@ class Storage
     protected function local_read($query)
     {
         $data = json_decode(file_get_contents("$this->basedir/$query"));
-        return (object)["data" => $data, "hash" => md5(json_encode($data)), "time" => filectime("$this->basedir/$query")];
+        $encodeddata = json_encode($data);
+        $hash = $data ? md5($encodeddata) : null;
+        return (object)["data" => $data, "hash" => $hash, "time" => filectime("$this->basedir/$query")];
     }
 
     protected function local_write($query, $data)
