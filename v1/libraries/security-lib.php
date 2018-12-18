@@ -51,7 +51,7 @@ class Security
         $firstletter = ALPHABET[$firsttotal % 26];
         $secondletter = ALPHABET[$secondtotal % 26];
 
-        return $firstletter . $secondletter . $id;
+        return "$firstletter$secondletter$id";
         
         //$id = incoming id;
         //logic!
