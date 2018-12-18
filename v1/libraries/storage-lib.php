@@ -133,13 +133,6 @@ class Storage
         return ALPHABET[$count % (count(ALPHABET))];
     }
 
-    protected function hash($id)
-    {
-        //$id = incoming id;
-        //logic!
-        //return outgoing id;
-    }
-
     protected function unhash($hash)
     {
         //inverse of hash()
