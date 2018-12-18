@@ -43,14 +43,16 @@ class StorageNode extends Storage
             $receipt0 = json_decode($this->remote_write("http://$server0.dev.nerdev.io/giftron/api/v1/storage/write/?$location", $data));
             $receipt1 = json_decode($this->remote_write("http://$server1.dev.nerdev.io/giftron/api/v1/storage/write/?$location", $data));
 
-            if (!$receipt0->hash || !$receipt1->hash)
+            if (!$receipt0->hash && !$receipt1->hash)
             {
-                return "something went wrong";
+                return "both $server0 and $server1 are down... hell hath frozen over";
             }
-            else
+            if (!$receipt0->hash xor !$receipt1->hash)
             {
-                return $receipt0;
+                return $receipt0->hash ? "problem with $server1" : "problem with $server0";
             }
+
+            return $receipt0;
         }
 
         return $this->local_write($location, $data);
