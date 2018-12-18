@@ -32,4 +32,29 @@ class Security
         $methods = gettype($methods) == "array" ? $methods : [$methods];
         return in_array($_SERVER['REQUEST_METHOD'], $methods);
     }
+
+    protected function hash($id)
+    {
+        $half = strlen($id) / 2;
+        $firsthalf = substr($id, 0, $half);
+        $secondhalf= substr($id, $half);
+        
+        
+        $firsttotal = 0;
+        $secondtotal = 0;
+        for($i = 0; $i<$half; $i++)
+        {
+            $firsttotal += $firsthalf[$i];
+            $secondtotal += $secondhalf[$i];
+        }
+        
+        $firstletter = ALPHABET[$firsttotal % 26];
+        $secondletter = ALPHABET[$secondtotal % 26];
+
+        return $firstletter . $secondletter . $id;
+        
+        //$id = incoming id;
+        //logic!
+        //return outgoing id;
+    }
 }
