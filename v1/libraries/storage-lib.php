@@ -61,7 +61,7 @@ class StorageNode extends Storage
 
 class Storage
 {
-    protected $basedir = ROOT . "/data";
+    protected $basedir = ROOT . "/data/giftron";
 
     function __construct()
     {
@@ -135,16 +135,9 @@ class Storage
 
     protected function hash($id)
     {
-        $hash = md5('521130623750897694');
-        if (is_numeric($hash))
-        {
-            return ALPHABET[$hash[0]] . ALPHABET[$hash[1]];
-        }
-        else
-        {
-            //select 2 letters
-            return preg_replace('/[0-9]+/', '', $hash);
-        }
+        //$id = incoming id;
+        //logic!
+        //return outgoing id;
     }
 
     protected function unhash($hash)
