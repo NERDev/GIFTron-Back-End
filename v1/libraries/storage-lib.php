@@ -65,7 +65,16 @@ class Storage
 
     function __construct()
     {
-        
+        $limit = count(ALPHABET);
+        $others = $limit - 1;
+        for ($i = 0; $i < $limit; $i++)
+        {
+            for ($j = 0; $j < $others; $j++)
+            {
+                $pairs[] = ALPHABET[$i] . ALPHABET[($i + $j + 1) % $limit];
+            }
+        }
+        $this->base650 = $pairs;
     }
 
     protected function mediate($server0, $server1, $location)
@@ -131,6 +140,15 @@ class Storage
         $count = intval(file_get_contents($counterfile));
         file_put_contents($counterfile, ++$count);
         return ALPHABET[$count % (count(ALPHABET))];
+    }
+
+    protected function locate($id)
+    {
+        $hash = sha1($id);
+        $fragment = substr($hash, 0, 4);
+        $int = base_convert($fragment, 16, 10) * 131;
+        $remainder = (($int / 127) | 0) % 650;
+        return $this->base650[$remainder];
     }
 
     protected function unhash($hash)
