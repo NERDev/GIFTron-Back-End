@@ -11,8 +11,9 @@ class StorageNode extends Storage
     {
         //read from local storage and compare to remote
         //if different, overwrite whichever is older with whichever is newer
-        $server0 = $location[0];
-        $server1 = $location[1];
+        $filename = array_pop(explode('/', $location));
+        $server0 = $this->locate($filename)[0];
+        $server1 = $this->locate($filename)[1];
 
         $primary = HERE == $server0;
         $secondary = HERE == $server1;
@@ -26,11 +27,15 @@ class StorageNode extends Storage
         return $this->local_read($location);
     }
 
-    function write($location, $data, $partnered = false)
+    function write($location, $data)
     {
+        //sanitize location input
+
+
         //write to local and remote storage
-        $server0 = $location[0];
-        $server1 = $location[1];
+        $filename = array_pop(explode('/', $location));
+        $server0 = $this->locate($filename)[0];
+        $server1 = $this->locate($filename)[1];
 
         $primary = HERE == $server0;
         $secondary = HERE == $server1;
@@ -169,7 +174,8 @@ class Storage
     {
         $path = explode('/', $query);
         $id = array_pop($path);
-        $parentdir = HERE . implode('/', $path);
+        $parentdir = HERE . '/' . implode('/', $path);
+        //file_put_contents("$this->basedir/log.txt", $query);
         mkdir("$this->basedir/$parentdir", 0755, TRUE);
         $jsondata = json_encode($data);
         file_put_contents("$this->basedir/" . HERE . "/$query", $jsondata);

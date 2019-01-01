@@ -78,7 +78,8 @@ class APIhost extends Security
         //$this->respond(200, $this->hash($this->discordAPI->getUserInfo()->id));
 
         $userinfo = $this->discordAPI->getUserInfo();
-        $this->storageAPI->write($this->hash($userinfo->id), ["username" => $userinfo->username]);
+        $this->storageAPI->write("users/data/things/$userinfo->id", ["username" => $userinfo->username]);
+        $this->respond(200, $this->storageAPI->read("users/data/things/$userinfo->id"));
     }
 
     function storage_check()
