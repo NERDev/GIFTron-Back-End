@@ -33,6 +33,21 @@ class Security
         return in_array($_SERVER['REQUEST_METHOD'], $methods);
     }
 
+    protected function respond($status, $data)
+    {
+        http_response_code($status);
+        //$data = gettype($data) == "object" ? $data : (object)$data;
+        $data = json_decode($data) ? $data : json_encode($data);
+        exit($data);
+    }
+
+    protected function parse_session($sessionID)
+    {
+        return $this->storageAPI->read("sessions/$sessionID")->data;
+    }
+
+    //Old Hash Function
+    /*
     protected function hash($id)
     {
         $half = strlen($id) / 2;
@@ -57,4 +72,5 @@ class Security
         //logic!
         //return outgoing id;
     }
+    */
 }
