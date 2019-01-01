@@ -25,31 +25,46 @@ class APIhost extends Security
         $credentials = json_decode(file_get_contents("$this->phproot/metadata/credentials"));
         $this->discordAPI = new DiscordAPI($credentials->clientId, $credentials->clientSecret);
         $this->storageAPI = new StorageNode;
-    }
 
-    private function respond($status, $data)
-    {
-        http_response_code($status);
-        //$data = gettype($data) == "object" ? $data : (object)$data;
-        $data = json_decode($data) ? $data : json_encode($data);
-        exit($data);
+        $this->discordAPI->accessToken = $this->parse_session($_COOKIE['session'])->token;
     }
 
     function login()
     {
         $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
+        isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
 
         //Verify that user has logged in successfully, and didn't forge a code
-
+        $this->discordAPI->getAccessToken('authorization_code', $_GET['code']);
+        
         if ($_GET['guild_id'])
         {
             //This user logged in, and also added the bot to a server.
             //Check if bot has already been added, or if this server even exists.
             //Also, check if this bot has the permissions it needs in order to function
+            //You know what, just alias the "add" API endpoint or whatever the bot add function is
         }
 
-        setcookie('token', $this->discordAPI->getAccessToken('authorization_code', $_GET['code']), null, '/');
-        $this->respond(200, "success");
+        //create session that expires at the end of the browsing period
+        $user = $this->discordAPI->getUserInfo();
+        $sessionID = uniqid();
+        $this->storageAPI->write("sessions/$sessionID", [
+            "user"  => $user->id,
+            "token" => $this->discordAPI->accessToken,
+            "ip"    => $_SERVER['REMOTE_ADDR']
+        ]);
+        setcookie('session', $sessionID, null, '/');
+
+        //Write the User to a file if it doesn't already
+        if (!$this->storageAPI->read("users/$user->id"))
+        {
+            $this->storageAPI->write("users/$user->id", $user);
+            $this->respond(200, "welcome new user!");
+        }
+        else
+        {
+            $this->respond(200, "welcome returning user!");
+        }
     }
 
     function user_info()
@@ -77,9 +92,7 @@ class APIhost extends Security
         //$this->respond(200, ["write transaction" => $this->storageAPI->write('ab4280', ["kek" => "ayylmao", "things" => ["stuff", "otherstuff"]]), "read transaction" => $this->storageAPI->read('ab4280')]);
         //$this->respond(200, $this->hash($this->discordAPI->getUserInfo()->id));
 
-        $userinfo = $this->discordAPI->getUserInfo();
-        $this->storageAPI->write("users/data/things/$userinfo->id", ["username" => $userinfo->username]);
-        $this->respond(200, $this->storageAPI->read("users/data/things/$userinfo->id"));
+        $this->respond(200, $this->discordAPI->getUserInfo());
     }
 
     function storage_check()

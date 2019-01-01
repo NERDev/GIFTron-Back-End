@@ -69,19 +69,16 @@ class DiscordAPI extends OAuth2Client
     
     function getUserInfo()
     {
-        $token = $_COOKIE['token'];
-        return $this->get("$this->urlBase/users/@me", $token);
+        return $this->get("$this->urlBase/users/@me", $this->accessToken);
     }
 
     function getUserGuilds()
     {
-        $token = $_COOKIE['token'];
-        return $this->get("$this->urlBase/users/@me/guilds", $token);
+        return $this->get("$this->urlBase/users/@me/guilds", $this->accessToken);
     }
 
     function getGuildInfo($id)
     {
-        $token = $_GET['token'];
-        return $this->get("$this->urlBase/guilds/$id", $token, 'bot');
+        return $this->get("$this->urlBase/guilds/$id", $this->accessToken, 'bot');
     }
 }

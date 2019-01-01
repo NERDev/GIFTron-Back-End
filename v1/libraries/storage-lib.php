@@ -115,11 +115,11 @@ class Storage
 
         if (!$server0result->data || !$server1result->data)
         {
-            //one of them screwed up... figure out which
+            //one of them is blank... figure out which
             if (!$server0result->data && !$server1result->data)
             {
-                //shit's broke, fam
-                return "oshit";
+                //file not found
+                return false;
             }
 
             if (!$server0result->data && $server1result->data)
