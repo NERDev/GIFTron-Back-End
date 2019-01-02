@@ -47,7 +47,7 @@ class APIhost extends Security
 
         //create session that expires at the end of the browsing period
         $user = $this->discordAPI->getUserInfo();
-        $sessionID = uniqid();
+        $sessionID = uniqid(random_int(0,999));
         $this->storageAPI->write("sessions/$sessionID", [
             "user"  => $user->id,
             "token" => $this->discordAPI->accessToken,
