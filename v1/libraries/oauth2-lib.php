@@ -33,12 +33,12 @@ class OAuth2Client
         return $response;
     }
 
-    function get($url, $token, $usertype = 'user')
+    function get($url, $usertype = 'user')
     {
         $tokentype = $usertype == 'user' ? 'Bearer' : 'Bot';
         $options = [
             'http' => [
-                "header" => "Authorization: $tokentype {$token}\r\n"
+                "header" => "Authorization: $tokentype {$this->accessToken}\r\n"
             ]
         ];
 
