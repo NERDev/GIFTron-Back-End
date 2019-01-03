@@ -46,6 +46,11 @@ class Security
         return $this->storageAPI->read("sessions/$sessionID")->data;
     }
 
+    function sanitize()
+    {
+        
+    }
+
     //Old Hash Function
     /*
     protected function hash($id)
