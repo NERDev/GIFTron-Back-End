@@ -28,23 +28,22 @@ class OAuth2Client
         ];
 
         $context  = stream_context_create($options);
-        $raw_response = file_get_contents($url, false, $context) ?? exit($this->errors[0]);
-        $response = json_decode($raw_response) ?? exit($this->errors[1]);
+        $raw_response = file_get_contents($url, false, $context);
+        $response = json_decode($raw_response);
         return $response;
     }
 
-    function get($url, $usertype = 'user')
+    function get($url, $token, $tokentype = 'Bearer')
     {
-        $tokentype = $usertype == 'user' ? 'Bearer' : 'Bot';
         $options = [
             'http' => [
-                "header" => "Authorization: $tokentype {$this->accessToken}\r\n"
+                "header" => "Authorization: $tokentype {$token}\r\n"
             ]
         ];
 
         $context  = stream_context_create($options);
-        $raw_response = file_get_contents($url, false, $context) ?? exit($this->errors[0]);
-        $response = json_decode($raw_response) ?? exit($this->errors[1]);
+        $raw_response = file_get_contents($url, false, $context);
+        $response = json_decode($raw_response);
         return $response;
     }
 
@@ -61,7 +60,7 @@ class OAuth2Client
         
         $response = $this->post($this->urlAccessToken, $data);
 
-        $this->refreshToken = $response->refresh_token;
-        return $this->accessToken = $response->access_token;
+        //$this->refreshToken = $response->refresh_token;
+        return $response->access_token;
     }
 }

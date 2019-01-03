@@ -69,16 +69,16 @@ class DiscordAPI extends OAuth2Client
     
     function getUserInfo()
     {
-        return $this->get("$this->urlBase/users/@me");
+        return $this->get("$this->urlBase/users/@me", $this->userToken);
     }
 
     function getUserGuilds()
     {
-        return $this->get("$this->urlBase/users/@me/guilds");
+        return $this->get("$this->urlBase/users/@me/guilds", $this->userToken);
     }
 
     function getGuildInfo($id)
     {
-        return $this->get("$this->urlBase/guilds/$id", 'bot');
+        return $this->get("$this->urlBase/guilds/$id", $this->botToken, 'Bot');
     }
 }

@@ -26,38 +26,42 @@ class APIhost extends Security
         $this->discordAPI = new DiscordAPI($credentials->clientId, $credentials->clientSecret);
         $this->storageAPI = new StorageNode;
 
-        $this->discordAPI->accessToken = $this->parse_session($_COOKIE['session'])->token;
+        $this->discordAPI->botToken = $credentials->botToken;
+        $this->discordAPI->userToken = $this->parse_session($_COOKIE['session'])->token;
+
+        //instantiate a User up here, pulling data from local storage. Login is what updates local storage.
     }
 
     function login()
     {
         $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
+        //var_dump(!$this->discordAPI->userToken xor $_GET['guild_id']);
+        //true ?: var_dump("kek");
+        //!$this->discordAPI->userToken xor $_GET['guild_id'] ?: $this->respond(200, "Already logged in");
+        if ($this->discordAPI->userToken && !$guildID = $_GET['guild_id'])
+        {
+            $this->respond(200, "Already logged in");
+        }
         isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
 
         //Verify that user has logged in successfully, and didn't forge a code
-        $this->discordAPI->getAccessToken('authorization_code', $_GET['code']);
+        $this->discordAPI->userToken = $this->discordAPI->getAccessToken('authorization_code', $_GET['code']);
+        $this->discordAPI->userToken ?: $this->respond(400, "Invalid code");
+
         
-        if ($_GET['guild_id'])
+        //Get User info
+        $remoteUserData = $this->discordAPI->getUserInfo();
+        $localUserData = $this->storageAPI->read("users/$remoteUserData->id")->data;
+        $user = (object) array_merge((array) $localUserData, (array) $remoteUserData);
+        //$user = $this->discordAPI->getUserInfo() ?? $this->respond(400, "Invalid user");
+        
+        //$user = $this->storageAPI->read("users/$user->id")->data ?: $user;
+        
+        
+        /*
+        if (!$user)
         {
-            //This user logged in, and also added the bot to a server.
-            //Check if bot has already been added, or if this server even exists.
-            //Also, check if this bot has the permissions it needs in order to function
-            //You know what, just alias the "add" API endpoint or whatever the bot add function is
-        }
-
-        //create session that expires at the end of the browsing period
-        $user = $this->discordAPI->getUserInfo();
-        $sessionID = uniqid(random_int(0,999), TRUE);
-        $this->storageAPI->write("sessions/$sessionID", [
-            "user"  => $user->id,
-            "token" => $this->discordAPI->accessToken,
-            "ip"    => $_SERVER['REMOTE_ADDR']
-        ]);
-        setcookie('session', $sessionID, null, '/');
-
-        //Write the User to a file if it doesn't already
-        if (!$this->storageAPI->read("users/$user->id"))
-        {
+            $user = $this->discordAPI->getUserInfo();
             $this->storageAPI->write("users/$user->id", $user);
             $this->respond(200, "welcome new user!");
         }
@@ -65,10 +69,50 @@ class APIhost extends Security
         {
             $this->respond(200, "welcome returning user!");
         }
+        */
+
+
+        //create session that expires at the end of the browsing period
+        $sessionID = uniqid(random_int(0,999), TRUE);
+        $this->storageAPI->write("sessions/$sessionID", [
+            "user"  => $user->id,
+            "token" => $this->discordAPI->userToken,
+            "ip"    => $_SERVER['REMOTE_ADDR']
+        ]);
+        setcookie('session', $sessionID, null, '/');
+
+        if ($guildID = $_GET['guild_id'])
+        {
+            //This user logged in, and also added the bot to a server.
+            //Check if bot has already been added, or if this server even exists.
+            //Also, check if this bot has the permissions it needs in order to function
+            if (!$this->storageAPI->read("guilds/$guildID"))
+            {
+                //Bot has not been added to this server before. It is either new or invalid.
+                $guildInfo = $this->discordAPI->getGuildInfo($guildID);
+                if ($guildInfo)
+                {
+                    //Bot is verifiably added to this server.
+                    $this->storageAPI->write("guilds/$guildID", $guildInfo);
+                    $user->guilds[] = $guildID;
+                }
+                else
+                {
+                    //invalid guild, someone's screwing with this thing
+                }
+            }
+        }
+
+        $this->storageAPI->write("users/$user->id", $user);
+
+        var_dump($localUserData, $remoteUserData, $user);
+        $this->respond(200, "Welcome, $user->username");
+
     }
 
     function user_info()
     {
+        $this->discordAPI->userToken ?: $this->respond(200, "Please Log In");
         $this->respond(200, $this->discordAPI->getUserInfo());
     }
 
@@ -92,7 +136,7 @@ class APIhost extends Security
         //$this->respond(200, ["write transaction" => $this->storageAPI->write('ab4280', ["kek" => "ayylmao", "things" => ["stuff", "otherstuff"]]), "read transaction" => $this->storageAPI->read('ab4280')]);
         //$this->respond(200, $this->hash($this->discordAPI->getUserInfo()->id));
 
-        $this->respond(200, $this->discordAPI->getUserInfo());
+        $this->respond(200, $this->discordAPI->getGuildInfo('521130623750897694'));
     }
 
     function storage_check()
