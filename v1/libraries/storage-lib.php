@@ -5,8 +5,6 @@ define('ALPHABET', range('a', 'z'));
 
 class StorageNode extends Storage
 {
-    
-
     function read($location)
     {
         //read from local storage and compare to remote
