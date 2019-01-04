@@ -85,10 +85,9 @@ class APIhost extends Security
                 $guildInfo = $this->discordAPI->getGuildInfo($guildID);
                 if ($guildInfo)
                 {
-                    var_dump($guildInfo, $this->discordAPI->getBotInfo());
-                    //Bot is verifiably added to this guild.
+                    //Bot is verifiably added to this guild. Add guild to User's list, and instantiate it.
                     $this->user->guilds[] = $guildID;
-                    $this->storageAPI->write("guilds/$guildID", $guildInfo);
+                    $this->storageAPI->write("guilds/$guildID", ["users" => [$this->user->id], "wallet" => 0, "giveaways" => []]);
                 }
                 else
                 {
@@ -103,7 +102,7 @@ class APIhost extends Security
         {
             //User has information that is new... Write changes
             $this->storageAPI->write("users/" . $this->user->id, $this->user);
-            var_dump($localUserData, $this->user);
+            //var_dump($localUserData, $this->user);
         }
 
         $this->respond(200, "Welcome, " . $this->user->username);
