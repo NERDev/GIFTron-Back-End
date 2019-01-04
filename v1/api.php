@@ -12,6 +12,23 @@ require_once "libraries/storage-lib.php";
 
 $apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd())), 5);
 
+class Giveaway
+{
+    function __construct($guildID)
+    {
+        $this->guild = $guildID;
+        foreach ($_POST as $param => $value) {
+            extract([$param]);
+            $this->$param = $value;
+        }
+    }
+
+    function verify_params()
+    {
+
+    }
+}
+
 class APIhost extends Security
 {
     protected $webroot;
@@ -87,7 +104,11 @@ class APIhost extends Security
                 {
                     //Bot is verifiably added to this guild. Add guild to User's list, and instantiate it.
                     $this->user->guilds[] = $guildID;
-                    $this->storageAPI->write("guilds/$guildID", ["users" => [$this->user->id], "wallet" => 0, "giveaways" => []]);
+                    $this->storageAPI->write("guilds/$guildID", [
+                        "users" => [$this->user->id],
+                        "wallet" => 0,
+                        "giveaways" => []
+                    ]);
                 }
                 else
                 {
@@ -105,7 +126,8 @@ class APIhost extends Security
             //var_dump($localUserData, $this->user);
         }
 
-        $this->respond(200, "Welcome, " . $this->user->username);
+        //$this->respond(200, "Welcome, " . $this->user->username);
+        $this->respond(200, $this->user);
 
     }
 
@@ -143,7 +165,12 @@ class APIhost extends Security
         //$this->respond(200, ["write transaction" => $this->storageAPI->write('ab4280', ["kek" => "ayylmao", "things" => ["stuff", "otherstuff"]]), "read transaction" => $this->storageAPI->read('ab4280')]);
         //$this->respond(200, $this->hash($this->discordAPI->getUserInfo()->id));
 
-        $this->respond(200, $this->discordAPI->getGuildInfo('521130623750897694'));
+        //$this->respond(200, $this->discordAPI->getGuildInfo('521130623750897694'));
+
+        $guildID = $_GET['guild_id'];
+        in_array($guildID, $this->user->guilds) ? $giveaway = new Giveaway($guildID) :
+        $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
+
     }
 
     function storage_check()
