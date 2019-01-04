@@ -27,93 +27,101 @@ class APIhost extends Security
         $this->storageAPI = new StorageNode;
 
         $this->discordAPI->botToken = $credentials->botToken;
-        $this->discordAPI->userToken = $this->parse_session($_COOKIE['session'])->token;
+        
+        if ($this->session = $this->parse_session($_COOKIE['session']))
+        {
+            //session exists
+            $this->user = $this->storageAPI->read("users/" . $this->session->user)->data;
+            $this->discordAPI->userToken = $this->session->token;
+        }
 
         //instantiate a User up here, pulling data from local storage. Login is what updates local storage.
     }
 
     function login()
     {
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        
+        //Pre-Login checks
         $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
-        //var_dump(!$this->discordAPI->userToken xor $_GET['guild_id']);
-        //true ?: var_dump("kek");
-        //!$this->discordAPI->userToken xor $_GET['guild_id'] ?: $this->respond(200, "Already logged in");
-        if ($this->discordAPI->userToken && !$guildID = $_GET['guild_id'])
+        if ($this->user && !$guildID = $_GET['guild_id'])
         {
             $this->respond(200, "Already logged in");
         }
         isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
 
-        //Verify that user has logged in successfully, and didn't forge a code
+
+        //Verify that User has logged in successfully, and didn't forge a code
         $this->discordAPI->userToken = $this->discordAPI->getAccessToken('authorization_code', $_GET['code']);
         $this->discordAPI->userToken ?: $this->respond(400, "Invalid code");
 
         
         //Get User info
-        $remoteUserData = $this->discordAPI->getUserInfo();
-        $localUserData = $this->storageAPI->read("users/$remoteUserData->id")->data;
-        $user = (object) array_merge((array) $localUserData, (array) $remoteUserData);
-        //$user = $this->discordAPI->getUserInfo() ?? $this->respond(400, "Invalid user");
+        $currentUserData = $this->discordAPI->getUserInfo();
+        $localUserData = $this->storageAPI->read("users/$currentUserData->id")->data;
+        $this->user = (object) array_merge(
+            (array) $localUserData,
+            (array) $currentUserData
+        );
         
-        //$user = $this->storageAPI->read("users/$user->id")->data ?: $user;
         
-        
-        /*
-        if (!$user)
-        {
-            $user = $this->discordAPI->getUserInfo();
-            $this->storageAPI->write("users/$user->id", $user);
-            $this->respond(200, "welcome new user!");
-        }
-        else
-        {
-            $this->respond(200, "welcome returning user!");
-        }
-        */
-
-
-        //create session that expires at the end of the browsing period
+        //Create session for User
         $sessionID = uniqid(random_int(0,999), TRUE);
         $this->storageAPI->write("sessions/$sessionID", [
-            "user"  => $user->id,
+            "user"  => $this->user->id,
             "token" => $this->discordAPI->userToken,
             "ip"    => $_SERVER['REMOTE_ADDR']
         ]);
         setcookie('session', $sessionID, null, '/');
 
+
+        //Check if User is attempting to add the bot to a guild
         if ($guildID = $_GET['guild_id'])
         {
-            //This user logged in, and also added the bot to a server.
-            //Check if bot has already been added, or if this server even exists.
-            //Also, check if this bot has the permissions it needs in order to function
+            //Check if bot has already been added, or if this guild even exists.
             if (!$this->storageAPI->read("guilds/$guildID"))
             {
-                //Bot has not been added to this server before. It is either new or invalid.
+                //Bot has not been added to this guild before. It is either new or invalid.
                 $guildInfo = $this->discordAPI->getGuildInfo($guildID);
                 if ($guildInfo)
                 {
-                    //Bot is verifiably added to this server.
+                    var_dump($guildInfo, $this->discordAPI->getBotInfo());
+                    //Bot is verifiably added to this guild.
+                    $this->user->guilds[] = $guildID;
                     $this->storageAPI->write("guilds/$guildID", $guildInfo);
-                    $user->guilds[] = $guildID;
                 }
                 else
                 {
-                    //invalid guild, someone's screwing with this thing
+                    //Bot has not actually been added to this guild. Something's fishy...
                 }
             }
         }
 
-        $this->storageAPI->write("users/$user->id", $user);
 
-        var_dump($localUserData, $remoteUserData, $user);
-        $this->respond(200, "Welcome, $user->username");
+        //Check if User has been updated with new information
+        if ($this->user != $localUserData)
+        {
+            //User has information that is new... Write changes
+            $this->storageAPI->write("users/" . $this->user->id, $this->user);
+            var_dump($localUserData, $this->user);
+        }
+
+        $this->respond(200, "Welcome, " . $this->user->username);
 
     }
 
     function user_info()
     {
         $this->discordAPI->userToken ?: $this->respond(200, "Please Log In");
-        $this->respond(200, $this->discordAPI->getUserInfo());
+        $this->respond(200, $this->user);
+        //$this->respond(200, $this->discordAPI->getUserInfo());
+        
+        /*
+        //Get User info
+        $currentUserData = $this->discordAPI->getUserInfo();
+        //$localUserData = $this->storageAPI->read("users/$remoteUserData->id")->data;
+        $this->respond(200, (object) array_merge((array) $this->user, (array) $remoteUserData));
+        */
     }
 
     function user_guilds()
