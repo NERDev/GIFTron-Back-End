@@ -51,8 +51,6 @@ class APIhost extends Security
             $this->user = $this->storageAPI->read("users/" . $this->session->user)->data;
             $this->discordAPI->userToken = $this->session->token;
         }
-
-        //instantiate a User up here, pulling data from local storage. Login is what updates local storage.
     }
 
     function login()
@@ -159,17 +157,12 @@ class APIhost extends Security
 
     function schedule_new()
     {
-        //$this->respond(200, $this->discordAPI->getGuildInfo($_GET['id']));
-        //$this->respond(200, $this->discordAPI->getBotGuilds());
-        //$this->respond(200, $this->storageAPI->write('ab4281', ["kek" => "stuff"]));
-        //$this->respond(200, ["write transaction" => $this->storageAPI->write('ab4280', ["kek" => "ayylmao", "things" => ["stuff", "otherstuff"]]), "read transaction" => $this->storageAPI->read('ab4280')]);
-        //$this->respond(200, $this->hash($this->discordAPI->getUserInfo()->id));
-
-        //$this->respond(200, $this->discordAPI->getGuildInfo('521130623750897694'));
-
-        $guildID = $_GET['guild_id'];
+        //Make sure we've got what we need
+        $guildID = $_GET['guild_id'] ?: $this->respond(400, "We can't schedule anything if we don't know the Guild ID.");
         in_array($guildID, $this->user->guilds) ? $giveaway = new Giveaway($guildID) :
         $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
+
+
 
     }
 
@@ -229,7 +222,32 @@ if (function_exists($argv[1]))
 }
 else
 {
+    $schema = json_decode(file_get_contents(PHPROOT . "/" . VERSION . "/schema.json"));
     $method = implode('_', $apipath);
+
+    //Get properties of method
+    $methodproperties = $schema;
+    foreach ($apipath as $property)
+    {
+        $methodproperties = $methodproperties->$property;
+    }
+
+
+    //Check before instantiating APIhost
+    if (!Security::require_methods($methodproperties->methods))
+    {
+        APIhost::respond(405, "-Method Not Allowed");
+    }
+
+    if ($methodproperties->protected)
+    {
+        if (!Security::trusted_server($_SERVER['REMOTE_ADDR']))
+        {
+            APIhost::respond(400, "-Untrusted Origin");
+        }
+    }
+
+    //Passed! Process the request
     $api = new APIhost;
     $api->$method();
 }

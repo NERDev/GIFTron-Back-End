@@ -33,7 +33,7 @@ class Security
         return in_array($_SERVER['REQUEST_METHOD'], $methods);
     }
 
-    protected function respond($status, $data)
+    function respond($status, $data)
     {
         http_response_code($status);
         //$data = gettype($data) == "object" ? $data : (object)$data;

@@ -12,6 +12,9 @@
     },
     "schedule": {
         "new": {
+            "methods": ["POST", "GET"]
+        },
+        "check": {
             "methods": ["GET"]
         }
     },
