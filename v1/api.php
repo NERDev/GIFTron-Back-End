@@ -35,11 +35,6 @@ class Giveaway
                             filter_var($value, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
         }
     }
-
-    function verify_params()
-    {
-
-    }
 }
 
 class APIhost extends Security
@@ -114,7 +109,7 @@ class APIhost extends Security
                 if ($guildInfo)
                 {
                     //Bot is verifiably added to this guild. Add guild to User's list, and instantiate it.
-                    $this->user->guilds[] = $guildID;
+                    $this->user->guilds[$guildID] = true;
                     $this->storageAPI->write("guilds/$guildID", [
                         "users" => [$this->user->id],
                         "wallet" => 0,
@@ -170,9 +165,10 @@ class APIhost extends Security
 
     function schedule_new()
     {
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
         //Make sure we've got what we need
         $guildID = $_GET['guild_id'] ?: $this->respond(400, "We can't schedule anything if we don't know the Guild ID.");
-        in_array($guildID, $this->user->guilds) ? $giveaway = new Giveaway($guildID) :
+        $this->user->guilds->$guildID ? $giveaway = new Giveaway($guildID) :
         $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
 
 
@@ -192,6 +188,7 @@ class APIhost extends Security
 
     function storage_write()
     {
+        //refactor to user $this->storageAPI as above
         $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
         $storageapi = new StorageNode;
         $this->respond(200, $storageapi->write($_SERVER['QUERY_STRING'], json_decode(file_get_contents("php://input"), true)));
