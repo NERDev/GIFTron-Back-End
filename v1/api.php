@@ -14,12 +14,25 @@ $apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd()))
 
 class Giveaway
 {
+    public $start;
+    public $end;
+    public $guild;
+    public $name;
+    public $visible;
+    public $known;
+    public $key;
+    public $recurring;
+
     function __construct($guildID)
     {
         $this->guild = $guildID;
-        foreach ($_POST as $param => $value) {
+        $params = array_intersect_key($_POST, get_object_vars($this));
+
+        foreach ($params as $param => $value) {
             extract([$param]);
-            $this->$param = $value;
+            $this->$param = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ??
+                            filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE) ??
+                            filter_var($value, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
         }
     }
 
@@ -163,7 +176,7 @@ class APIhost extends Security
         $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
 
 
-
+        var_dump($giveaway);
     }
 
     function storage_check()
