@@ -99,7 +99,8 @@ class DiscordAPI extends OAuth2Client
     {
         $data = [
             "content" => $message,
-            "username" => "GIFTron"
+            "username" => $this->bot->username,
+            "avatar_url" => "https://cdn.discordapp.com/avatars/" . $this->bot->id . "/" . $this->bot->avatar
         ];
         //return $this->postJSON("$this->urlBase/channels/$channel/messages", $data, $this->botToken, 'Bot');
         return $this->postJSON("$this->urlBase/webhooks/$webhook/$token", $data);

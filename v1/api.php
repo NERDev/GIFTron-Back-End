@@ -53,6 +53,7 @@ class APIhost extends Security
         $this->storageAPI = new StorageNode;
 
         $this->discordAPI->botToken = $credentials->botToken;
+        $this->discordAPI->bot = $this->discordAPI->getBotInfo();
         
         if ($this->session = $this->parse_session($_COOKIE['session']))
         {
