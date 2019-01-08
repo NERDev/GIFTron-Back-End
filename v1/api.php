@@ -10,22 +10,23 @@ require_once "libraries/security-lib.php";
 require_once "libraries/discord-lib.php";
 require_once "libraries/storage-lib.php";
 
+header_remove("X-Powered-By");
 $apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd())), 5);
 
 class Giveaway
 {
     public $start;
     public $end;
-    public $guild;
+    public $guildID;
     public $name;
     public $visible;
     public $known;
     public $key;
     public $recurring;
 
-    function __construct($guildID)
+    function __construct($guild)
     {
-        $this->guild = $guildID;
+        $this->guild = $guild->id;
         $params = array_intersect_key($_POST, get_object_vars($this));
 
         foreach ($params as $param => $value) {
@@ -63,7 +64,7 @@ class APIhost extends Security
 
     function login()
     {
-        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        error_reporting(E_ALL); ini_set('display_errors', 1);
         
         //Pre-Login checks
         $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
@@ -109,12 +110,18 @@ class APIhost extends Security
                 if ($guildInfo)
                 {
                     //Bot is verifiably added to this guild. Add guild to User's list, and instantiate it.
-                    $this->user->guilds[$guildID] = true;
+                    $this->user->guilds->$guildID = true;
                     $this->storageAPI->write("guilds/$guildID", [
                         "users" => [$this->user->id],
                         "wallet" => 0,
                         "giveaways" => []
                     ]);
+
+                    //Search the guild for a channel called #giveaways. If it doesn't exist, create it.
+
+                    //Webhook the #giveaways channel.
+
+                    //var_dump($this->discordAPI->createWebhook(521130623750897696));
                 }
                 else
                 {
@@ -165,12 +172,19 @@ class APIhost extends Security
 
     function schedule_new()
     {
-        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        error_reporting(E_ALL); ini_set('display_errors', 1);
         //Make sure we've got what we need
         $guildID = $_GET['guild_id'] ?: $this->respond(400, "We can't schedule anything if we don't know the Guild ID.");
-        $this->user->guilds->$guildID ? $giveaway = new Giveaway($guildID) :
+        $this->user->guilds->$guildID ? $guild = $this->storageAPI->read("guilds/$guildID")->data :
         $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
 
+        $giveaway = new Giveaway($guild);
+
+        if (!$giveaway->key)
+        {
+            //Alert NERDev that an order has been placed, and needs to be filled
+            var_dump($this->discordAPI->postMessage("test", null, null));
+        }
 
         var_dump($giveaway);
     }

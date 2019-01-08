@@ -81,4 +81,27 @@ class DiscordAPI extends OAuth2Client
     {
         return $this->get("$this->urlBase/guilds/$id", $this->botToken, 'Bot');
     }
+
+    function getBotInfo()
+    {
+        return $this->get("$this->urlBase/users/@me", $this->botToken, 'Bot');
+    }
+
+    function createWebhook($channel)
+    {
+        $data = [
+            "name" => "GIFTron"
+        ];
+        return $this->postJSON("$this->urlBase/channels/$channel/webhooks", $data, $this->botToken, 'Bot');
+    }
+
+    function postMessage($message, $webhook, $token)
+    {
+        $data = [
+            "content" => $message,
+            "username" => "GIFTron"
+        ];
+        //return $this->postJSON("$this->urlBase/channels/$channel/messages", $data, $this->botToken, 'Bot');
+        return $this->postJSON("$this->urlBase/webhooks/$webhook/$token", $data);
+    }
 }
