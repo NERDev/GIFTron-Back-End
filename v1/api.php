@@ -23,10 +23,11 @@ class Giveaway
     public $known;
     public $key;
     public $recurring;
+    public $gameID;
 
     function __construct($guild)
     {
-        $this->guild = $guild->id;
+        $this->guildID = $guild->id;
         $params = array_intersect_key($_POST, get_object_vars($this));
 
         foreach ($params as $param => $value) {
@@ -34,6 +35,19 @@ class Giveaway
             $this->$param = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ??
                             filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE) ??
                             filter_var($value, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
+        }
+
+        if (!$this->gameID)
+        {
+            $this->fail();
+        }
+    }
+
+    function fail()
+    {
+        foreach ($this as $key => $value)
+        {
+            unset($this->$key);
         }
     }
 }
@@ -53,7 +67,9 @@ class APIhost extends Security
         $this->storageAPI = new StorageNode;
 
         $this->discordAPI->botToken = $credentials->botToken;
-        $this->discordAPI->bot = $this->discordAPI->getBotInfo();
+
+        //This adds too much time to each request, do not enable
+        //$this->discordAPI->bot = $this->discordAPI->getBotInfo();
         
         if ($this->session = $this->parse_session($_COOKIE['session']))
         {
@@ -103,6 +119,7 @@ class APIhost extends Security
         //Check if User is attempting to add the bot to a guild
         if ($guildID = $_GET['guild_id'])
         {
+            //Make sure it has the correct permissions.
             //Check if bot has already been added, or if this guild even exists.
             if (!$this->storageAPI->read("guilds/$guildID"))
             {
@@ -110,19 +127,15 @@ class APIhost extends Security
                 $guildInfo = $this->discordAPI->getGuildInfo($guildID);
                 if ($guildInfo)
                 {
-                    //Bot is verifiably added to this guild. Add guild to User's list, and instantiate it.
+                    //Bot is verifiably added to this guild.
+                    //Add guild to User's list, and instantiate it.
+                    //We need to keep track of the webhook to use.
                     $this->user->guilds->$guildID = true;
                     $this->storageAPI->write("guilds/$guildID", [
                         "users" => [$this->user->id],
                         "wallet" => 0,
                         "giveaways" => []
                     ]);
-
-                    //Search the guild for a channel called #giveaways. If it doesn't exist, create it.
-
-                    //Webhook the #giveaways channel.
-
-                    //var_dump($this->discordAPI->createWebhook(521130623750897696));
                 }
                 else
                 {
@@ -180,11 +193,13 @@ class APIhost extends Security
         $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
 
         $giveaway = new Giveaway($guild);
+        $giveaway->gameID ?: $this->respond(400, "Giveaway parameters incorrect, please try again.");
 
         if (!$giveaway->key)
         {
             //Alert NERDev that an order has been placed, and needs to be filled
-            var_dump($this->discordAPI->postMessage("test", null, null));
+            $guildInfo = $this->discordAPI->getGuildInfo($guildID);
+            var_dump($this->discordAPI->postMessage("$guildInfo->name is attempting to buy a key for $giveaway->gameID with $$guild->wallet", 531964952819400704));
         }
 
         var_dump($giveaway);
