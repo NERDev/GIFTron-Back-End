@@ -95,12 +95,14 @@ class DiscordAPI extends OAuth2Client
         return $this->postJSON("$this->urlBase/channels/$channel/webhooks", $data, $this->botToken, 'Bot');
     }
 
-    function postMessage($message, $webhook, $token)
+    function postMessage($message, $webhook)
     {
+        //Check if webhook exists. If not, make a new one, record the change in the Guild file, and notify the server admins.
+        $token = $this->get("$this->urlBase/webhooks/$webhook", $this->botToken, 'Bot')->token;
         $data = [
             "content" => $message,
-            "username" => $this->bot->username,
-            "avatar_url" => "https://cdn.discordapp.com/avatars/" . $this->bot->id . "/" . $this->bot->avatar
+            "username" => "GIFTron",
+            "avatar_url" => "https://cdn.discordapp.com/avatars/523579896144986125/ac8fc8f4611e5c99c292f13359401ea3" // . $this->bot->id . "/" . $this->bot->avatar
         ];
         //return $this->postJSON("$this->urlBase/channels/$channel/messages", $data, $this->botToken, 'Bot');
         return $this->postJSON("$this->urlBase/webhooks/$webhook/$token", $data);
