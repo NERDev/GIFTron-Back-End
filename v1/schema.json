@@ -10,12 +10,23 @@
             "methods": ["GET"]
         }
     },
-    "schedule": {
-        "new": {
+    "guild": {
+        "info": {
+            "methods": ["GET"]
+        },
+        "configure": {
             "methods": ["POST", "GET"]
         },
-        "check": {
+        "users": {
             "methods": ["GET"]
+        },
+        "schedule": {
+            "new": {
+                "methods": ["POST", "GET"]
+            },
+            "check": {
+                "methods": ["GET"]
+            }
         }
     },
     "storage": {

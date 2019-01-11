@@ -6,6 +6,9 @@ define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
 define('VERSION', preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4]);
 */
+
+define('SERVER_WELCOME', '533005932079218689');
+
 require_once "libraries/security-lib.php";
 require_once "libraries/discord-lib.php";
 require_once "libraries/storage-lib.php";
@@ -27,28 +30,28 @@ class Giveaway
 
     function __construct($guild)
     {
-        $this->guildID = $guild->id;
+        $this->guildID = $_GET['guild_id'];
         $params = array_intersect_key($_POST, get_object_vars($this));
 
-        foreach ($params as $param => $value) {
+        foreach ($params as $param => $value)
+        {
             extract([$param]);
             $this->$param = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ??
                             filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE) ??
                             filter_var($value, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
         }
 
-        if (!$this->gameID)
+        switch ($this)
         {
-            $this->fail();
+            case (!$this->gameID):
+                $this->fail($this);
+                break;
         }
     }
 
-    function fail()
+    function fail(Giveaway &$me)
     {
-        foreach ($this as $key => $value)
-        {
-            unset($this->$key);
-        }
+        //
     }
 }
 
@@ -81,15 +84,17 @@ class APIhost extends Security
 
     function login()
     {
-        error_reporting(E_ALL); ini_set('display_errors', 1);
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
         
         //Pre-Login checks
         $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
         if ($this->user && !$guildID = $_GET['guild_id'])
         {
-            $this->respond(200, "Already logged in");
+            $this->redirect("$this->apiroot/user/info");
+            //$this->respond(200, "Already logged in");
         }
         isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
+        
 
 
         //Verify that User has logged in successfully, and didn't forge a code
@@ -132,14 +137,19 @@ class APIhost extends Security
                     //We need to keep track of the webhook to use.
                     $this->user->guilds->$guildID = true;
                     $this->storageAPI->write("guilds/$guildID", [
-                        "users" => [$this->user->id],
+                        "users" => [$this->user->id => true],
                         "wallet" => 0,
                         "giveaways" => []
                     ]);
+
+                    $this->discordAPI->postMessage("Attention! @" . $this->user->username . " just added me to $guildInfo->name!", SERVER_WELCOME);
+
+                    //$this->redirect("/giftron#dashboard?setup=$guildID", false);
+                    $redirect = "/giftron#dashboard/$guildID";
                 }
                 else
                 {
-                    //Bot has not actually been added to this guild. Something's fishy...
+                    //Bot has been removed from this guild.
                 }
             }
         }
@@ -154,8 +164,11 @@ class APIhost extends Security
         }
 
         //$this->respond(200, "Welcome, " . $this->user->username);
-        $this->respond(200, $this->user);
+        //$this->respond(200, $this->user);
 
+        //$this->redirect($redirect ?? "/giftron#dashboard");
+        //troubleshoot issue with $localUserData not representing what it should
+        var_dump($this->user, $localUserData, $this->user != $localUserData);
     }
 
     function user_info()
@@ -184,6 +197,22 @@ class APIhost extends Security
         $this->respond(200, $this->discordAPI->getUserGuilds());
     }
 
+    function guild_info()
+    {
+        var_dump($this->discordAPI->postMessage("Hi Carrot", 525404638552391682));
+    }
+
+    function guild_configure()
+    {
+        $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want to configure?");
+        $this->user->guilds->$guildID ? $guild = $this->storageAPI->read("guilds/$guildID")->data :
+        $this->respond(400, "Hey, don't go meddling with guilds you shouldn't.");
+        $guildInfo = $this->discordAPI->getGuildInfo($guildID);
+        var_dump($guildInfo);
+        var_dump($guild);
+        var_dump($this->user);
+    }
+
     function schedule_new()
     {
         error_reporting(E_ALL); ini_set('display_errors', 1);
@@ -193,13 +222,12 @@ class APIhost extends Security
         $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
 
         $giveaway = new Giveaway($guild);
-        $giveaway->gameID ?: $this->respond(400, "Giveaway parameters incorrect, please try again.");
 
         if (!$giveaway->key)
         {
             //Alert NERDev that an order has been placed, and needs to be filled
             $guildInfo = $this->discordAPI->getGuildInfo($guildID);
-            var_dump($this->discordAPI->postMessage("$guildInfo->name is attempting to buy a key for $giveaway->gameID with $$guild->wallet", 531964952819400704));
+            //var_dump($this->discordAPI->postMessage("$guildInfo->name is attempting to buy a key for $giveaway->gameID with $$guild->wallet", 531964952819400704));
         }
 
         var_dump($giveaway);
@@ -289,5 +317,6 @@ else
 
     //Passed! Process the request
     $api = new APIhost;
-    $api->$method();
+    method_exists($api, $method) ? $api->$method() :
+    $api->respond(418, "We don't have any code for this endpoint... maybe it's not built yet.");    
 }

@@ -87,6 +87,11 @@ class DiscordAPI extends OAuth2Client
         return $this->get("$this->urlBase/users/@me", $this->botToken, 'Bot');
     }
 
+    function getGatewayBot()
+    {
+        return $this->get("$this->urlBase/gateway/bot", $this->botToken, 'Bot');
+    }
+
     function createWebhook($channel)
     {
         $data = [
@@ -95,16 +100,18 @@ class DiscordAPI extends OAuth2Client
         return $this->postJSON("$this->urlBase/channels/$channel/webhooks", $data, $this->botToken, 'Bot');
     }
 
-    function postMessage($message, $webhook)
+    function postMessage($message, $channel)
     {
         //Check if webhook exists. If not, make a new one, record the change in the Guild file, and notify the server admins.
-        $token = $this->get("$this->urlBase/webhooks/$webhook", $this->botToken, 'Bot')->token;
-        $data = [
-            "content" => $message,
-            "username" => "GIFTron",
-            "avatar_url" => "https://cdn.discordapp.com/avatars/523579896144986125/ac8fc8f4611e5c99c292f13359401ea3" // . $this->bot->id . "/" . $this->bot->avatar
-        ];
+        //$token = $this->get("$this->urlBase/webhooks/$webhook", $this->botToken, 'Bot')->token;
+        /*
         //return $this->postJSON("$this->urlBase/channels/$channel/messages", $data, $this->botToken, 'Bot');
         return $this->postJSON("$this->urlBase/webhooks/$webhook/$token", $data);
+        */
+        $data = [
+            "content" => $message,
+            "tts" => false
+        ];
+        return $this->postJSON("$this->urlBase/channels/$channel/messages", $data, $this->botToken, 'Bot');
     }
 }

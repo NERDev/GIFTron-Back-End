@@ -35,7 +35,7 @@ class OAuth2Client
 
     function postJSON($url, $data, $token = null, $tokentype = 'Bearer')
     {
-        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        error_reporting(E_ALL); ini_set('display_errors', 1);
         $data = json_encode($data);
         $options = [
             'http' => [

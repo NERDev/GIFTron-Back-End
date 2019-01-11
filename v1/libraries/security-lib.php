@@ -4,6 +4,7 @@ define('ROOT', realpath($_SERVER['DOCUMENT_ROOT'] . '/..'));
 define('PHPROOT', realpath(ROOT . '/git/GIFTron/GIFTron-Back-End'));
 define('WEBROOT', realpath(ROOT . '/webroot'));
 define('VERSION', preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4]);
+define('APIROOT', '/giftron/api/' . VERSION);
 
 //add defines for phproot, webroot, version, and whitelist
 
@@ -19,6 +20,7 @@ class Security
         $this->phproot = PHPROOT;
         $this->webroot = WEBROOT;
         $this->version = VERSION;
+        $this->apiroot = APIROOT;
         $this->whitelist = json_decode(file_get_contents("$this->phproot/metadata/whitelist"));
     }
 
@@ -39,6 +41,20 @@ class Security
         //$data = gettype($data) == "object" ? $data : (object)$data;
         $data = json_decode($data) ? $data : json_encode($data);
         exit($data);
+    }
+
+    protected function redirect($url, $immediate = true)
+    {
+        http_response_code(302);
+        header("Location: $url");
+        if ($immediate)
+        {
+            exit("Redirecting...");
+        }
+        else
+        {
+            echo "Redirecting...";
+        }
     }
 
     protected function parse_session($sessionID)
