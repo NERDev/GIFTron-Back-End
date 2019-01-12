@@ -62,7 +62,7 @@ class OAuth2Client
         $context  = stream_context_create($options);
         $raw_response = file_get_contents($url, false, $context);
         $response = json_decode($raw_response);
-        return $response;
+        return $response ?? $http_response_header;
     }
 
     function getAccessToken($grant_type, $code = null)
