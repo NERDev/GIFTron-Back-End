@@ -10,8 +10,6 @@ define('APIROOT', '/giftron/api/' . VERSION);
 
 class Security
 {
-    private $whitelist;
-
     function __construct()
     {
         //$this->phproot  = realpath(ROOT . '/git/GIFTron/GIFTron-Back-End');
@@ -21,12 +19,11 @@ class Security
         $this->webroot = WEBROOT;
         $this->version = VERSION;
         $this->apiroot = APIROOT;
-        $this->whitelist = json_decode(file_get_contents("$this->phproot/metadata/whitelist"));
     }
 
     function trusted_server($ip)
     {
-        return in_array($ip, $this->whitelist);
+        return in_array($ip, json_decode(file_get_contents("$this->phproot/metadata/whitelist")));
     }
 
     function require_methods($methods)
