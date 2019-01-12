@@ -6,13 +6,16 @@ class DiscordAPI extends OAuth2Client
 {
     function __construct($id, $secret)
     {
+        $host = "discordapp.com";
+        if(!@fsockopen($host, 443, $errno, $errstr, 30)) throw new Exception("Discord be ded.");
+
         $params = [
             'clientId'                => $id,
             'clientSecret'            => $secret,
-            'redirectUri'             => 'http://dev.nerdev.io/giftron/api/v1/login',
-            'urlBase'                 => 'https://discordapp.com/api',
-            'urlAuthorize'            => 'https://discordapp.com/api/oauth2/authorize',
-            'urlAccessToken'          => 'https://discordapp.com/api/oauth2/token'
+            'redirectUri'             => "http://dev.nerdev.io/giftron/api/v1/login",
+            'urlBase'                 => "https://$host/api",
+            'urlAuthorize'            => "https://$host/api/oauth2/authorize",
+            'urlAccessToken'          => "https://$host/api/oauth2/token"
         ];
 
         $this->perms = [
