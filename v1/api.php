@@ -62,11 +62,17 @@ class APIhost extends Security
     protected $discordAPI;
     public $version;
 
-    function __construct()
+    function __construct($internal)
     {
         parent::__construct();
         $credentials = json_decode(file_get_contents("$this->phproot/metadata/credentials"));
-        $this->discordAPI = new DiscordAPI($credentials->clientId, $credentials->clientSecret);
+
+        try {
+            $this->discordAPI = new DiscordAPI($credentials->clientId, $credentials->clientSecret);
+        } catch (Exception $e) {
+            $internal ?: $this->respond(500, $e->getMessage());
+        }
+        
         $this->storageAPI = new StorageNode;
 
         $this->discordAPI->botToken = $credentials->botToken;
@@ -113,12 +119,11 @@ class APIhost extends Security
         
         //Create session for User
         $sessionID = uniqid(random_int(0,999), TRUE);
-        $this->storageAPI->write("sessions/$sessionID", [
+        if ($this->storageAPI->write("sessions/$sessionID", [
             "user"  => $this->user->id,
             "token" => $this->discordAPI->userToken,
             "ip"    => $_SERVER['REMOTE_ADDR']
-        ]);
-        setcookie('session', $sessionID, null, '/');
+        ])) setcookie('session', $sessionID, null, '/');        
 
 
         //Check if User is attempting to add the bot to a guild
@@ -137,8 +142,9 @@ class APIhost extends Security
                     //We need to keep track of the webhook to use.
                     $this->user->guilds->$guildID = true;
                     $this->storageAPI->write("guilds/$guildID", [
-                        "users" => [$this->user->id => true],
-                        "wallet" => 0,
+                        "users"     => [$this->user->id => true],
+                        "channel"   => null,
+                        "wallet"    => 0,
                         "giveaways" => []
                     ]);
 
@@ -159,9 +165,10 @@ class APIhost extends Security
         if ($this->user != $localUserData)
         {
             //User has information that is new... Write changes
-            $this->storageAPI->write("users/" . $this->user->id, $this->user);
+            //$this->storageAPI->write("users/" . $this->user->id, $this->user);
             //var_dump($localUserData, $this->user);
         }
+        $this->storageAPI->write("users/" . $this->user->id, $this->user);
 
         //$this->respond(200, "Welcome, " . $this->user->username);
         //$this->respond(200, $this->user);
@@ -187,6 +194,7 @@ class APIhost extends Security
 
     function user_guilds()
     {
+        /*
         if (is_numeric($_SERVER['QUERY_STRING']))
         {
             $guilds = $this->discordAPI->getUserGuilds();
@@ -195,11 +203,41 @@ class APIhost extends Security
             $this->respond(200, $this->discordAPI->list_permissions($_SERVER['QUERY_STRING']));
         }
         $this->respond(200, $this->discordAPI->getUserGuilds());
+        */
+
+        //Beware: this is an EXPENSIVE request!!
+
+        //Let's build a list of guilds relating to this user
+        $userguilds = array_map('strval', array_keys((array)$this->user->guilds));
+        foreach ($this->discordAPI->getUserGuilds() as $discordGuild)
+        {
+            in_array($discordGuild->id, $userguilds) ?: $guilds[] = $discordGuild->id;
+        }
+        
+        $guilds = array_merge($userguilds, $guilds);
+
+        //This is the almighty filter... if it doesn't exist on our system, it doesn't get returned.
+        foreach ($guilds as $guildID)
+        {
+            if (!$this->storageAPI->read("guilds/$guildID")->hash)
+            {
+                unset($this->user->guilds->$guildID);
+            }
+        }
+        $this->respond(200, $this->user->guilds);
     }
 
     function guild_info()
     {
-        var_dump($this->discordAPI->postMessage("Hi Carrot", 525404638552391682));
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want information for?");
+        in_array($guildID, array_keys((array)$this->user->guilds)) ? $guild = $this->storageAPI->read("guilds/$guildID")->data :
+        $this->respond(400, "Hey, don't go peeking at guilds you shouldn't.");
+        $guild = $this->storageAPI->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
+        var_dump($guild);
+        //var_dump($this->discordAPI->getUserGuilds());
+        //var_dump($this->discordAPI->getGuildInfo($guildID));
+        //var_dump($this->discordAPI->postMessage("Hi Carrot", 525404638552391682));
     }
 
     function guild_configure()
@@ -292,6 +330,7 @@ else
 {
     $schema = json_decode(file_get_contents(PHPROOT . "/" . VERSION . "/schema.json"));
     $method = implode('_', $apipath);
+    $security = new Security;
 
     //Get properties of method
     $methodproperties = $schema;
@@ -302,21 +341,23 @@ else
 
 
     //Check before instantiating APIhost
-    if (!Security::require_methods($methodproperties->methods))
+    if (!$security->require_methods($methodproperties->methods))
     {
-        APIhost::respond(405, "-Method Not Allowed");
+        $security->respond(405, "-Method Not Allowed");
     }
+
+    $internal = $security->trusted_server($_SERVER['REMOTE_ADDR']);
 
     if ($methodproperties->protected)
     {
-        if (!Security::trusted_server($_SERVER['REMOTE_ADDR']))
+        if (!$internal)
         {
-            APIhost::respond(400, "-Untrusted Origin");
+            $security->respond(400, "-Untrusted Origin");
         }
     }
 
     //Passed! Process the request
-    $api = new APIhost;
+    $api = new APIhost($internal);
     method_exists($api, $method) ? $api->$method() :
     $api->respond(418, "We don't have any code for this endpoint... maybe it's not built yet.");    
 }
