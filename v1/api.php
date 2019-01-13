@@ -10,7 +10,7 @@ define('VERSION', preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4])
 define('SERVER_WELCOME', '533005932079218689');
 
 require_once "libraries/security-lib.php";
-require_once "libraries/discord-lib.php";
+require_once "libraries/discord-lib2.php";
 require_once "libraries/storage-lib.php";
 
 header_remove("X-Powered-By");
@@ -67,11 +67,16 @@ class APIhost extends Security
         parent::__construct();
         $credentials = json_decode(file_get_contents("$this->phproot/metadata/credentials"));
 
+        
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
         try {
-            $this->discordAPI = new DiscordAPI($credentials->clientId, $credentials->clientSecret);
+            $this->discordAPI = new DiscordAPI($credentials);
         } catch (Exception $e) {
-            $internal ?: $this->respond(500, $e->getMessage());
+            $this->respond(500, $e->getMessage());
         }
+
+        var_dump($this->discordAPI->user->info);
+        var_dump($this->discordAPI->user->info);
         
         $this->storageAPI = new StorageNode;
 
@@ -234,7 +239,43 @@ class APIhost extends Security
         in_array($guildID, array_keys((array)$this->user->guilds)) ? $guild = $this->storageAPI->read("guilds/$guildID")->data :
         $this->respond(400, "Hey, don't go peeking at guilds you shouldn't.");
         $guild = $this->storageAPI->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
-        var_dump($guild);
+        if (!$guild->channel)
+        {
+            $defaultChannel = 'giveaway';
+            $channels = $this->discordAPI->getGuildChannels($guildID);
+
+            var_dump($channels);
+
+            //Make sure to only include text channels
+            foreach ($channels as $channel)
+            {
+                if ($channel->type == 0)
+                {
+                    $textChannels[$channel->id] = $channel->name;
+                }
+            }
+
+
+            //Figure out which text channel has the best match
+            $bestsim = 50;
+            foreach ($textChannels as $id => $name)
+            {
+                similar_text($name, $defaultChannel, $sim);
+                if ($sim > $bestsim)
+                {
+                    $bestsim = $sim;
+                    $suggestedChannel = [$id => $name];
+                }
+            }
+            
+            $guild->setup = [
+                "channel" => [
+                    "suggested" => $suggestedChannel,
+                    "available" => $textChannels
+                ]
+            ];
+        }
+        $this->respond(200, $guild);
         //var_dump($this->discordAPI->getUserGuilds());
         //var_dump($this->discordAPI->getGuildInfo($guildID));
         //var_dump($this->discordAPI->postMessage("Hi Carrot", 525404638552391682));
