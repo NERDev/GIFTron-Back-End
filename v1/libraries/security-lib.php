@@ -56,7 +56,7 @@ class Security
 
     protected function parse_session($sessionID)
     {
-        return $this->storageAPI->read("sessions/$sessionID")->data;
+        return $this->storage->read("sessions/$sessionID")->data;
     }
 
     function sanitize()

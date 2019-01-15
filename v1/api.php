@@ -59,7 +59,8 @@ class APIhost extends Security
 {
     protected $webroot;
     protected $phproot;
-    protected $discordAPI;
+    protected $discord;
+    protected $storage;
     public $version;
 
     function __construct($internal)
@@ -70,26 +71,18 @@ class APIhost extends Security
         
         //error_reporting(E_ALL); ini_set('display_errors', 1);
         try {
-            $this->discordAPI = new DiscordAPI($credentials);
+            $this->discord = new DiscordLib\API($credentials);
         } catch (Exception $e) {
             $this->respond(500, $e->getMessage());
         }
-
-        var_dump($this->discordAPI->user->info);
-        var_dump($this->discordAPI->user->info);
         
-        $this->storageAPI = new StorageNode;
-
-        $this->discordAPI->botToken = $credentials->botToken;
-
-        //This adds too much time to each request, do not enable
-        //$this->discordAPI->bot = $this->discordAPI->getBotInfo();
+        $this->storage = new StorageNode;
         
         if ($this->session = $this->parse_session($_COOKIE['session']))
         {
             //session exists
-            $this->user = $this->storageAPI->read("users/" . $this->session->user)->data;
-            $this->discordAPI->userToken = $this->session->token;
+            $this->user = $this->storage->read("users/" . $this->session->user)->data;
+            $this->discord->user->token = $this->session->token;
         }
     }
 
@@ -109,13 +102,12 @@ class APIhost extends Security
 
 
         //Verify that User has logged in successfully, and didn't forge a code
-        $this->discordAPI->userToken = $this->discordAPI->getAccessToken('authorization_code', $_GET['code']);
-        $this->discordAPI->userToken ?: $this->respond(400, "Invalid code");
-
+        var_dump($this->discord->user->verify($_GET['code'])) ?: $this->respond(400, "Invalid Code");
+        exit;
         
         //Get User info
         $currentUserData = $this->discordAPI->getUserInfo();
-        $localUserData = $this->storageAPI->read("users/$currentUserData->id")->data;
+        $localUserData = $this->storage->read("users/$currentUserData->id")->data;
         $this->user = (object) array_merge(
             (array) $localUserData,
             (array) $currentUserData
@@ -124,7 +116,7 @@ class APIhost extends Security
         
         //Create session for User
         $sessionID = uniqid(random_int(0,999), TRUE);
-        if ($this->storageAPI->write("sessions/$sessionID", [
+        if ($this->storage->write("sessions/$sessionID", [
             "user"  => $this->user->id,
             "token" => $this->discordAPI->userToken,
             "ip"    => $_SERVER['REMOTE_ADDR']
@@ -136,7 +128,7 @@ class APIhost extends Security
         {
             //Make sure it has the correct permissions.
             //Check if bot has already been added, or if this guild even exists.
-            if (!$this->storageAPI->read("guilds/$guildID"))
+            if (!$this->storage->read("guilds/$guildID"))
             {
                 //Bot has not been added to this guild before. It is either new or invalid.
                 $guildInfo = $this->discordAPI->getGuildInfo($guildID);
@@ -146,7 +138,7 @@ class APIhost extends Security
                     //Add guild to User's list, and instantiate it.
                     //We need to keep track of the webhook to use.
                     $this->user->guilds->$guildID = true;
-                    $this->storageAPI->write("guilds/$guildID", [
+                    $this->storage->write("guilds/$guildID", [
                         "users"     => [$this->user->id => true],
                         "channel"   => null,
                         "wallet"    => 0,
@@ -170,10 +162,10 @@ class APIhost extends Security
         if ($this->user != $localUserData)
         {
             //User has information that is new... Write changes
-            //$this->storageAPI->write("users/" . $this->user->id, $this->user);
+            //$this->storage->write("users/" . $this->user->id, $this->user);
             //var_dump($localUserData, $this->user);
         }
-        $this->storageAPI->write("users/" . $this->user->id, $this->user);
+        $this->storage->write("users/" . $this->user->id, $this->user);
 
         //$this->respond(200, "Welcome, " . $this->user->username);
         //$this->respond(200, $this->user);
@@ -192,7 +184,7 @@ class APIhost extends Security
         /*
         //Get User info
         $currentUserData = $this->discordAPI->getUserInfo();
-        //$localUserData = $this->storageAPI->read("users/$remoteUserData->id")->data;
+        //$localUserData = $this->storage->read("users/$remoteUserData->id")->data;
         $this->respond(200, (object) array_merge((array) $this->user, (array) $remoteUserData));
         */
     }
@@ -224,7 +216,7 @@ class APIhost extends Security
         //This is the almighty filter... if it doesn't exist on our system, it doesn't get returned.
         foreach ($guilds as $guildID)
         {
-            if (!$this->storageAPI->read("guilds/$guildID")->hash)
+            if (!$this->storage->read("guilds/$guildID")->hash)
             {
                 unset($this->user->guilds->$guildID);
             }
@@ -236,9 +228,9 @@ class APIhost extends Security
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
         $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want information for?");
-        in_array($guildID, array_keys((array)$this->user->guilds)) ? $guild = $this->storageAPI->read("guilds/$guildID")->data :
+        in_array($guildID, array_keys((array)$this->user->guilds)) ? $guild = $this->storage->read("guilds/$guildID")->data :
         $this->respond(400, "Hey, don't go peeking at guilds you shouldn't.");
-        $guild = $this->storageAPI->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
+        $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
         if (!$guild->channel)
         {
             $defaultChannel = 'giveaway';
@@ -284,7 +276,7 @@ class APIhost extends Security
     function guild_configure()
     {
         $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want to configure?");
-        $this->user->guilds->$guildID ? $guild = $this->storageAPI->read("guilds/$guildID")->data :
+        $this->user->guilds->$guildID ? $guild = $this->storage->read("guilds/$guildID")->data :
         $this->respond(400, "Hey, don't go meddling with guilds you shouldn't.");
         $guildInfo = $this->discordAPI->getGuildInfo($guildID);
         var_dump($guildInfo);
@@ -297,7 +289,7 @@ class APIhost extends Security
         error_reporting(E_ALL); ini_set('display_errors', 1);
         //Make sure we've got what we need
         $guildID = $_GET['guild_id'] ?: $this->respond(400, "We can't schedule anything if we don't know the Guild ID.");
-        $this->user->guilds->$guildID ? $guild = $this->storageAPI->read("guilds/$guildID")->data :
+        $this->user->guilds->$guildID ? $guild = $this->storage->read("guilds/$guildID")->data :
         $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
 
         $giveaway = new Giveaway($guild);
@@ -320,15 +312,15 @@ class APIhost extends Security
     function storage_read()
     {
         $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
-        $this->respond(200, $this->storageAPI->read($_SERVER['QUERY_STRING']));
+        $this->respond(200, $this->storage->read($_SERVER['QUERY_STRING']));
     }
 
     function storage_write()
     {
-        //refactor to user $this->storageAPI as above
+        //refactor to user $this->storage as above
         $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
-        $storageapi = new StorageNode;
-        $this->respond(200, $storageapi->write($_SERVER['QUERY_STRING'], json_decode(file_get_contents("php://input"), true)));
+        $storage = new StorageNode;
+        $this->respond(200, $storage->write($_SERVER['QUERY_STRING'], json_decode(file_get_contents("php://input"), true)));
     }
 }
 

@@ -2,15 +2,8 @@
 
 class OAuth2Client
 {
-    private $errors;
-
     function __construct($params)
-    {
-        $this->errors = [
-            "Can't talk to the server properly",
-            "Cannot Decode Response: Check Permissions or Reauthorize"
-        ];
-        
+    {        
         foreach ($params as $param => $value) {
             extract([$param]);
             $this->$param = $value;
