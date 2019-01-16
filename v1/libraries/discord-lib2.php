@@ -4,28 +4,24 @@ namespace DiscordLib;
 
 //error_reporting(E_ALL); ini_set('display_errors', 1);
 
-class HTTP
+abstract class HTTP
 {
     public static $clientId;
     public static $clientSecret;
+    public static $baseURL;
 
     static function get($url, $token, $tokentype = 'Bearer')
     {
-        $options = [
+        return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
                 "header" => "Authorization: $tokentype {$token}\r\n"
             ]
-        ];
-
-        $context  = stream_context_create($options);
-        $raw_response = file_get_contents($url, false, $context);
-        $response = json_decode($raw_response);
-        return $response;
+        ])));
     }
     
     static function post($url, $data)
     {
-        return json_decode(file_get_contents($url, false, stream_context_create([
+        return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
                 'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
                 'method'  => 'POST',
@@ -41,11 +37,8 @@ class User extends API
 
     function auth($code)
     {
-        //$redirectUri = ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") ."://$_SERVER[HTTP_HOST]$_SERVER[PATH_INFO]");
-
         $redirectUri = "http".(!boolval($_SERVER['HTTPS'])?"s":"")."://".$_SERVER['SERVER_NAME'].$_SERVER['URL'];
-
-        return (bool)$this->token = HTTP::post('https://discordapp.com/api/oauth2/token', [
+        return (bool)$this->token = HTTP::post('/oauth2/token', [
             'client_id'     => HTTP::$clientId,
             'client_secret' => HTTP::$clientSecret,
             'grant_type'    => 'authorization_code',
@@ -71,6 +64,7 @@ class API
             $this->bot->token = $credentials->botToken;
             HTTP::$clientId = $credentials->clientId;
             HTTP::$clientSecret = $credentials->clientSecret;
+            HTTP::$baseURL = 'https://discordapp.com/api';
         }
     }
 
@@ -90,7 +84,7 @@ class API
         }
         elseif (method_exists($this, $n))
         {
-            return $this->$n();
+            return $this->$n = $this->$n();
         }
         else
         {
@@ -103,10 +97,10 @@ class API
         throw new Exception("Cannot call method $name");
     }
 
-    function info()
+    function info($user = '@me')
     {
         var_dump("going and getting information using token $this->token");
-        return $this->{__FUNCTION__} = 'information';
+        return HTTP::get("/users/$user", $this->token);
     }
 
     function postMessage($message)
