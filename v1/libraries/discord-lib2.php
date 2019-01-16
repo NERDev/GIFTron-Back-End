@@ -2,7 +2,7 @@
 
 namespace DiscordLib;
 
-//error_reporting(E_ALL); ini_set('display_errors', 1);
+error_reporting(E_ALL); ini_set('display_errors', 1);
 
 abstract class HTTP
 {
@@ -10,8 +10,25 @@ abstract class HTTP
     public static $clientSecret;
     public static $baseURL;
 
-    static function get($url, $token, $tokentype = 'Bearer')
+    /*
+    private static function token()
     {
+        $backtrace = debug_backtrace();
+        foreach ($backtrace as $i => $step)
+        {
+            if (gettype($step['object']->discord) == 'object' && strtolower(end(explode('\\', $backtrace[$i]['class']))) == get_class($this))
+            {
+                var_dump("ayylmao", $step['object']->discord->{}->token);
+                return $step['object']->discord->{strtolower(end(explode('\\', $backtrace[$i]['class'])))}->token;
+            }
+        }
+    }
+    */
+
+    static function get($url, $token = null)
+    {
+        $token = debug_backtrace()[1]['object']->token;
+        $tokentype = 'Bearer';
         return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
                 "header" => "Authorization: $tokentype {$token}\r\n"
@@ -19,7 +36,7 @@ abstract class HTTP
         ])));
     }
     
-    static function post($url, $data)
+    static function post($url, $data, $token = null)
     {
         return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
@@ -33,7 +50,7 @@ abstract class HTTP
 
 class User extends API
 {
-    protected $token;
+    public $token;
 
     function auth($code)
     {
@@ -49,9 +66,18 @@ class User extends API
     }
 }
 
+class Guilds extends API
+{
+    function __get($n)
+    {
+        //var_dump($this, debug_backtrace()[1]['class'], $n);
+        return $this->$n = HTTP::get("/guilds/$n", $this->token);
+    }
+}
+
 class Bot extends API
 {
-    protected $token;
+    public $token;
 }
 
 class API
@@ -103,10 +129,9 @@ class API
         return HTTP::get("/users/$user", $this->token);
     }
 
-    function postMessage($message)
+    function postMessage($message, $channelid)
     {
-        //var_dump($this);
-        return "Posting '$message' on behalf of " . (new \ReflectionClass($this))->getShortName() . " using token: $this->token";
+        return HTTP::post("/channels/$channelid/messages", $message, $this->token);
     }
 }
 

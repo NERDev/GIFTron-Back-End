@@ -88,7 +88,7 @@ class APIhost extends Security
 
     function login()
     {
-        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        error_reporting(E_ALL); ini_set('display_errors', 1);
         
         //Pre-Login checks
         $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
@@ -103,24 +103,20 @@ class APIhost extends Security
 
         //Verify that User has logged in successfully, and didn't forge a code
         $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
-        var_dump($this->discord->user->info);
-        $this->respond(200, "Good to proceed");
-        exit;
         
         //Get User info
-        $currentUserData = $this->discordAPI->getUserInfo();
-        $localUserData = $this->storage->read("users/$currentUserData->id")->data;
+        $localUserData = $this->storage->read("users/{$this->discord->user->info->id}")->data;
         $this->user = (object) array_merge(
             (array) $localUserData,
-            (array) $currentUserData
+            (array) $this->discord->user->info
         );
         
         
         //Create session for User
-        $sessionID = uniqid(random_int(0,999), TRUE);
+        $sessionID = md5(uniqid(random_int(0,999), TRUE));
         if ($this->storage->write("sessions/$sessionID", [
             "user"  => $this->user->id,
-            "token" => $this->discordAPI->userToken,
+            "token" => $this->discord->user->token,
             "ip"    => $_SERVER['REMOTE_ADDR']
         ])) setcookie('session', $sessionID, null, '/');        
 
@@ -133,12 +129,11 @@ class APIhost extends Security
             if (!$this->storage->read("guilds/$guildID"))
             {
                 //Bot has not been added to this guild before. It is either new or invalid.
-                $guildInfo = $this->discordAPI->getGuildInfo($guildID);
-                if ($guildInfo)
+                var_dump("ayylmao", $this->discord->bot->guilds->$guildID);
+                if (false)
                 {
                     //Bot is verifiably added to this guild.
                     //Add guild to User's list, and instantiate it.
-                    //We need to keep track of the webhook to use.
                     $this->user->guilds->$guildID = true;
                     $this->storage->write("guilds/$guildID", [
                         "users"     => [$this->user->id => true],
@@ -147,7 +142,7 @@ class APIhost extends Security
                         "giveaways" => []
                     ]);
 
-                    $this->discordAPI->postMessage("Attention! @" . $this->user->username . " just added me to $guildInfo->name!", SERVER_WELCOME);
+                    $this->discordAPI->bot->postMessage("Attention! @" . $this->user->username . " just added me to $guildInfo->name!", SERVER_WELCOME);
 
                     //$this->redirect("/giftron#dashboard?setup=$guildID", false);
                     $redirect = "/giftron#dashboard/$guildID";
@@ -161,49 +156,20 @@ class APIhost extends Security
 
 
         //Check if User has been updated with new information
-        if ($this->user != $localUserData)
-        {
-            //User has information that is new... Write changes
-            //$this->storage->write("users/" . $this->user->id, $this->user);
-            //var_dump($localUserData, $this->user);
-        }
         $this->storage->write("users/" . $this->user->id, $this->user);
 
-        //$this->respond(200, "Welcome, " . $this->user->username);
-        //$this->respond(200, $this->user);
-
-        //$this->redirect($redirect ?? "/giftron#dashboard");
         //troubleshoot issue with $localUserData not representing what it should
         var_dump($this->user, $localUserData, $this->user != $localUserData);
     }
 
     function user_info()
     {
-        $this->discordAPI->userToken ?: $this->respond(200, "Please Log In");
+        $this->discord->user->token ?: $this->respond(200, "Please Log In");
         $this->respond(200, $this->user);
-        //$this->respond(200, $this->discordAPI->getUserInfo());
-        
-        /*
-        //Get User info
-        $currentUserData = $this->discordAPI->getUserInfo();
-        //$localUserData = $this->storage->read("users/$remoteUserData->id")->data;
-        $this->respond(200, (object) array_merge((array) $this->user, (array) $remoteUserData));
-        */
     }
 
     function user_guilds()
     {
-        /*
-        if (is_numeric($_SERVER['QUERY_STRING']))
-        {
-            $guilds = $this->discordAPI->getUserGuilds();
-
-            $this->discordAPI->list_permissions($_SERVER['QUERY_STRING']);
-            $this->respond(200, $this->discordAPI->list_permissions($_SERVER['QUERY_STRING']));
-        }
-        $this->respond(200, $this->discordAPI->getUserGuilds());
-        */
-
         //Beware: this is an EXPENSIVE request!!
 
         //Let's build a list of guilds relating to this user
