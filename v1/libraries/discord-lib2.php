@@ -6,7 +6,10 @@ namespace DiscordLib;
 
 class HTTP
 {
-    function get($url, $token, $tokentype = 'Bearer')
+    public static $clientId;
+    public static $clientSecret;
+
+    static function get($url, $token, $tokentype = 'Bearer')
     {
         $options = [
             'http' => [
@@ -20,20 +23,15 @@ class HTTP
         return $response;
     }
     
-    function post($url, $data)
+    static function post($url, $data)
     {
-        $options = [
+        return json_decode(file_get_contents($url, false, stream_context_create([
             'http' => [
                 'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
                 'method'  => 'POST',
                 'content' => http_build_query($data),
             ]
-        ];
-
-        $context  = stream_context_create($options);
-        $raw_response = file_get_contents($url, false, $context);
-        $response = json_decode($raw_response);
-        return $response;
+        ])));
     }
 }
 
@@ -41,22 +39,20 @@ class User extends API
 {
     protected $token;
 
-    function verify($code)
+    function auth($code)
     {
-        $redirectUri = ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") ."://$_SERVER[HTTP_HOST]$_SERVER[URL]");
+        //$redirectUri = ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") ."://$_SERVER[HTTP_HOST]$_SERVER[PATH_INFO]");
 
-        var_dump($this);
+        $redirectUri = "http".(!boolval($_SERVER['HTTPS'])?"s":"")."://".$_SERVER['SERVER_NAME'].$_SERVER['URL'];
 
-        $data = [
-            'client_id'     => '523579896144986125',
-            'client_secret' => 'yMNCfF3aSUDwwLDiZF3QDdH6YAyKnC_S',
+        return (bool)$this->token = HTTP::post('https://discordapp.com/api/oauth2/token', [
+            'client_id'     => HTTP::$clientId,
+            'client_secret' => HTTP::$clientSecret,
             'grant_type'    => 'authorization_code',
             'code'          => $code,
             'redirect_uri'  => $redirectUri,
             'scope'         => 'identify'
-        ];
-    
-        return HTTP::post('https://discordapp.com/api/oauth2/token', $data)->access_token;
+        ])->access_token;
     }
 }
 
@@ -67,19 +63,23 @@ class Bot extends API
 
 class API
 {
+    
     function __construct($credentials = null)
     {
         if ($credentials)
         {
-            var_dump($credentials);
             $this->bot->token = $credentials->botToken;
+            HTTP::$clientId = $credentials->clientId;
+            HTTP::$clientSecret = $credentials->clientSecret;
         }
     }
 
+    
     function __set($n, $v)
     {
         $this->$n = $v;
     }
+    
 
     function __get($n)
     {

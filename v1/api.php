@@ -102,8 +102,8 @@ class APIhost extends Security
 
 
         //Verify that User has logged in successfully, and didn't forge a code
-        $access_token = $this->discord->user->verify($_GET['code']) ?: $this->respond(400, "Invalid Code");
-        var_dump($access_token);
+        $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
+        $this->respond(200, "Good to proceed");
         exit;
         
         //Get User info
