@@ -81,28 +81,27 @@ class APIhost extends Security
         if ($this->session = $this->parse_session($_COOKIE['session']))
         {
             //session exists
-            $this->user = $this->storage->read("users/" . $this->session->user)->data;
-            $this->discord->user->token = $this->session->token;
+            if (time() < $this->session->expires)
+            {
+                //session hasn't expired yet
+                $this->user = $this->storage->read("users/" . $this->session->user)->data;
+                $this->discord->user->token = $this->session->token;
+            }
         }
     }
 
     function login()
     {
-        error_reporting(E_ALL); ini_set('display_errors', 1);
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
         
         //Pre-Login checks
-        $this->require_methods('GET') ?: $this->respond(400, "Unsupported Method");
         if ($this->user && !$guildID = $_GET['guild_id'])
         {
             $this->redirect("$this->apiroot/user/info");
-            //$this->respond(200, "Already logged in");
         }
         isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
-        
-
-
-        //Verify that User has logged in successfully, and didn't forge a code
         $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
+        
         
         //Get User info
         $localUserData = $this->storage->read("users/{$this->discord->user->info->id}")->data;
@@ -115,10 +114,11 @@ class APIhost extends Security
         //Create session for User
         $sessionID = md5(uniqid(random_int(0,999), TRUE));
         if ($this->storage->write("sessions/$sessionID", [
-            "user"  => $this->user->id,
-            "token" => $this->discord->user->token,
-            "ip"    => $_SERVER['REMOTE_ADDR']
-        ])) setcookie('session', $sessionID, null, '/');        
+            "user"    => $this->user->id,
+            "token"   => $this->discord->user->token,
+            "expires" => $this->discord->user->timeout,
+            "ip"      => $_SERVER['REMOTE_ADDR']
+        ])) setcookie('session', $sessionID, $this->discord->user->timeout, '/');        
 
 
         //Check if User is attempting to add the bot to a guild
@@ -129,8 +129,7 @@ class APIhost extends Security
             if (!$this->storage->read("guilds/$guildID"))
             {
                 //Bot has not been added to this guild before. It is either new or invalid.
-                var_dump("ayylmao", $this->discord->bot->guilds->$guildID);
-                if (false)
+                if ($this->discord->bot->guilds->$guildID)
                 {
                     //Bot is verifiably added to this guild.
                     //Add guild to User's list, and instantiate it.
@@ -142,9 +141,14 @@ class APIhost extends Security
                         "giveaways" => []
                     ]);
 
-                    $this->discordAPI->bot->postMessage("Attention! @" . $this->user->username . " just added me to $guildInfo->name!", SERVER_WELCOME);
+                    $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                        "Attention! <@".$this->user->id."> just added me to " .
+                        $this->discord->bot->guilds->$guildID->name . "!"
+                    );
 
-                    //$this->redirect("/giftron#dashboard?setup=$guildID", false);
+                    //$this->discordAPI->bot->postMessage("Attention! @" . $this->user->username . " just added me to $guildInfo->name!", SERVER_WELCOME);
+
+                    //$this->redirect("/giftron/dashboard?setup=$guildID", false);
                     $redirect = "/giftron#dashboard/$guildID";
                 }
                 else
@@ -157,9 +161,9 @@ class APIhost extends Security
 
         //Check if User has been updated with new information
         $this->storage->write("users/" . $this->user->id, $this->user);
+        var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
 
         //troubleshoot issue with $localUserData not representing what it should
-        var_dump($this->user, $localUserData, $this->user != $localUserData);
     }
 
     function user_info()
