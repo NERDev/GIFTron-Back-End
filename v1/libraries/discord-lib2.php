@@ -2,34 +2,49 @@
 
 namespace DiscordLib;
 
-error_reporting(E_ALL); ini_set('display_errors', 1);
+//error_reporting(E_ALL); ini_set('display_errors', 1);
 
 abstract class HTTP
 {
+    public static $requests;
     public static $clientId;
     public static $clientSecret;
     public static $baseURL;
 
-    /*
-    private static function token()
+    private static function type($context)
     {
-        $backtrace = debug_backtrace();
-        foreach ($backtrace as $i => $step)
+        if ($context == 'User')
         {
-            if (gettype($step['object']->discord) == 'object' && strtolower(end(explode('\\', $backtrace[$i]['class']))) == get_class($this))
-            {
-                var_dump("ayylmao", $step['object']->discord->{}->token);
-                return $step['object']->discord->{strtolower(end(explode('\\', $backtrace[$i]['class'])))}->token;
-            }
+            return 'Bearer';
+        }
+        elseif ($context == 'Bot')
+        {
+            return 'Bot';
+        }
+        else
+        {
+            return false;
         }
     }
-    */
 
-    static function get($url, $token = null)
+    private static function buildHeaders($data)
     {
+        foreach ($data as $header => $value)
+        {
+            $headers[] = "$header: $value";
+        }
+
+        return implode("\r\n", $headers);
+    }
+
+    static function get($url)
+    {
+        //var_dump("Executing GET on $url");
+        self::$requests++;
+
         $prevobj = debug_backtrace()[1]['object'];
-        $tokentype = (new \ReflectionClass($prevobj))->getShortName();
-        $tokentype = $c == 'Bot' ? $c : 'Bearer';
+        $tokentype = self::type(explode('/', $prevobj->context)[0]);
+        //var_dump("$tokentype, $prevobj->token", $prevobj, "Authorization: $tokentype {$prevobj->token}\r\n");
         return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
                 "header" => "Authorization: $tokentype {$prevobj->token}\r\n"
@@ -37,13 +52,23 @@ abstract class HTTP
         ])));
     }
     
-    static function post($url, $data, $token = null)
+    static function post($url, $data)
     {
+        //var_dump("Executing POST on $url");
+        self::$requests++;
+
+        $prevobj = debug_backtrace()[1]['object'];
+        $tokentype = self::type(explode('/', $prevobj->context)[0]);
+        $tokentype && $headers['Authorization'] = "$tokentype {$prevobj->token}";
+        $headers['Content-Type'] = "application/" . (json_decode($data) ? 'json' : 'x-www-form-urlencoded');
+        
+        //var_dump(self::buildHeaders($headers));
+
         return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
-                'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
+                'header'  => self::buildHeaders($headers),
                 'method'  => 'POST',
-                'content' => http_build_query($data),
+                'content' => $data,
             ]
         ])));
     }
@@ -52,62 +77,133 @@ abstract class HTTP
 class User extends API
 {
     public $token;
+    public $context;
 
     function auth($code)
     {
         $redirectUri = "http".(!boolval($_SERVER['HTTPS'])?"s":"")."://".$_SERVER['SERVER_NAME'].$_SERVER['URL'];
-        return (bool)$this->token = HTTP::post('/oauth2/token', [
+        $response = HTTP::post('/oauth2/token', http_build_query([
             'client_id'     => HTTP::$clientId,
             'client_secret' => HTTP::$clientSecret,
             'grant_type'    => 'authorization_code',
             'code'          => $code,
             'redirect_uri'  => $redirectUri,
             'scope'         => 'identify'
-        ])->access_token;
+        ]));
+        $this->token = $response->access_token;
+        $this->timeout = ($response->expires_in + time() - ini_get('default_socket_timeout'));
+        return (bool)$response;
+    }
+}
+
+class Channel
+{
+    public $token;
+    public $context;
+    public $id;
+
+    function __construct($id)
+    {
+        $this->id = $id;
+    }
+
+    function __get($n)
+    {
+        if (method_exists($this, $n))
+        {
+            return $this->$n = $this->$n();
+        }
+    }
+
+    function info()
+    {
+        return HTTP::get("/channels/$this->id");
+    }
+
+    function postMessage($message)
+    {
+        return HTTP::post("/channels/$this->id/messages", json_encode([
+            "content" => $message,
+            "tts" => false
+        ]));
+    }
+}
+
+class Channels extends API
+{
+    public $token;
+    public $context;
+
+    function __get($n)
+    {
+        if (!in_array($n, get_class_vars($this)))
+        {
+            $this->$n = new Channel($n);
+            $this->$n->id = $n;
+            $this->$n->token = $this->token;
+            $this->$n->context = $this->context;
+            return $this->$n;
+        }
     }
 }
 
 class Guilds extends API
 {
+    public $token;
+    public $context;
+
     function __get($n)
     {
-        //var_dump($this, debug_backtrace()[1]['class'], $n);
-        return $this->$n = HTTP::get("/guilds/$n", $this->token);
+        if (!in_array($n, get_class_vars($this)))
+        {
+            return $this->$n = HTTP::get("/guilds/$n");
+        }
     }
 }
 
 class Bot extends API
 {
     public $token;
+    public $context;
 }
 
 class API
 {
     
-    function __construct($credentials = null)
+    function __construct($param1 = null, $param2 = null)
     {
-        if ($credentials)
+        if (gettype($param1) == 'object')
         {
+            $credentials = $param1;
             $this->bot->token = $credentials->botToken;
             HTTP::$clientId = $credentials->clientId;
             HTTP::$clientSecret = $credentials->clientSecret;
             HTTP::$baseURL = 'https://discordapp.com/api';
         }
+        else
+        {
+            $this->context .= $param1;
+            $this->token = $param2;
+            //var_dump("context: $this->context", "token: $this->token");
+        }
     }
 
-    
+    /*
     function __set($n, $v)
     {
         $this->$n = $v;
     }
-    
+    */    
 
     function __get($n)
     {
         $classname = __NAMESPACE__ . "\\$n";
+        $context = get_parent_class($this) ? (new \ReflectionClass($this))->getShortName() : ucfirst($n);
+        //var_dump("Here is where \$context needs to be determined.", $context, get_parent_class($this), $this);
+        
         if (class_exists($classname))
         {
-            return $this->$n = new $classname;
+            return $this->$n = new $classname($context, $this->token);
         }
         elseif (method_exists($this, $n))
         {
@@ -115,7 +211,7 @@ class API
         }
         else
         {
-            return "I have no idea what $n is";
+            return false;
         }
     }
 
@@ -126,8 +222,7 @@ class API
 
     function info($user = '@me')
     {
-        var_dump("going and getting information using token $this->token");
-        return HTTP::get("/users/$user", $this->token);
+        return HTTP::get("/users/$user");
     }
 
     function postMessage($message, $channelid)
