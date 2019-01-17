@@ -27,11 +27,12 @@ abstract class HTTP
 
     static function get($url, $token = null)
     {
-        $token = debug_backtrace()[1]['object']->token;
-        $tokentype = 'Bearer';
+        $prevobj = debug_backtrace()[1]['object'];
+        $tokentype = (new \ReflectionClass($prevobj))->getShortName();
+        $tokentype = $c == 'Bot' ? $c : 'Bearer';
         return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
-                "header" => "Authorization: $tokentype {$token}\r\n"
+                "header" => "Authorization: $tokentype {$prevobj->token}\r\n"
             ]
         ])));
     }
