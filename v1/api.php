@@ -90,35 +90,31 @@ class APIhost extends Security
         }
     }
 
-    function login()
+    function user_auth()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
-        
-        //Pre-Login checks
-        if ($this->user && !$guildID = $_GET['guild_id'])
+        if (!$this->user)
         {
-            $this->redirect("$this->apiroot/user/info");
-        }
-        isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
-        $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
-        
+            isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
+            $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
 
-        //Get User info
-        $localUserData = $this->storage->read("users/{$this->discord->user->info->id}")->data;
-        $this->user = (object) array_merge(
-            (array) $localUserData,
-            (array) $this->discord->user->info
-        );
-        
-        
-        //Create session for User
-        $sessionID = md5(uniqid(random_int(0,999), TRUE));
-        if ($this->storage->write("sessions/$sessionID", [
-            "user"    => $this->user->id,
-            "token"   => $this->discord->user->token,
-            "expires" => $this->discord->user->timeout,
-            "ip"      => $_SERVER['REMOTE_ADDR']
-        ])) setcookie('session', $sessionID, $this->discord->user->timeout, '/');        
+
+            //Get User info
+            $localUserData = $this->storage->read("users/{$this->discord->user->info->id}")->data;
+            $this->user = (object) array_merge(
+                (array) $localUserData,
+                (array) $this->discord->user->info
+            );
+            
+            //Create session for User
+            $sessionID = md5(uniqid(random_int(0,999), TRUE));
+            if ($this->storage->write("sessions/$sessionID", [
+                "user"    => $this->user->id,
+                "token"   => $this->discord->user->token,
+                "expires" => $this->discord->user->timeout,
+                "ip"      => $_SERVER['REMOTE_ADDR']
+            ])) setcookie('session', $sessionID, $this->discord->user->timeout, '/');
+        }
 
 
         //Check if User is attempting to add the bot to a guild
@@ -129,36 +125,15 @@ class APIhost extends Security
             if (!$this->storage->read("guilds/$guildID"))
             {
                 //Bot has not been added to this guild before. It is either new or invalid.
-                if ($this->discord->bot->guilds->$guildID)
+                if ($this->discord->bot->guilds->$guildID->info)
                 {
                     //Bot is verifiably added to this guild.
-                    $perms = $this->discord->list_permissions($_GET['permissions']);
-
-                    var_dump($perms);
-
-                    if (in_array('textSendMessages', $perms))
-                    {
-                        //Minimum required permissions set.
-                        $channel = null;
-                    }
-                    else
-                    {
-                        //Minimum required permissions not set.
-                        $channel = false;
-
-                        //$this->discord->bot->directMessage($this->user->id, "Hey there!");
-                    }
-
-                    if (!in_array('generalManageChannels', $perms))
-                    {
-                        $this->discord->bot->directMessage($this->user->id, "Hey there! I'm a little gimped without Manage Channels... i.e. I can't fix myself if something happens to my giveaway channel(s).");
-                    }
 
                     //Add guild to User's list, and instantiate it.
-                    $this->user->guilds->$guildID = true;
+                    $this->user->guilds[] = "$guildID";
                     $this->storage->write("guilds/$guildID", [
-                        "users"     => [$this->user->id => true],
-                        "channel"   => $channel,
+                        "users"     => [$this->user->id],
+                        "channel"   => null,
                         "wallet"    => 0,
                         "giveaways" => []
                     ]);
@@ -167,30 +142,29 @@ class APIhost extends Security
                     //Alert to the welcome channel that we have a new member
                     $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
                         "Attention! <@".$this->user->id."> just added me to " .
-                        $this->discord->bot->guilds->$guildID->name . "!"
+                        $this->discord->bot->guilds->$guildID->info->name . "!"
                     );
-
-                    //$this->redirect("/giftron/dashboard?setup=$guildID", false);
-                    $redirect = "/giftron/dashboard?$guildID";
                 }
                 else
                 {
                     //Bot has been removed from this guild.
+                    $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                        "Uh oh! <@".$this->user->id."> just tried to add me to $guildID, but I'm not in that guild.
+                        Something's wrong."
+                    );
                 }
             }
         }
 
 
         //Check if User has been updated with new information
+        var_dump($this->user);
         $this->storage->write("users/" . $this->user->id, $this->user);
         var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
-
-        //troubleshoot issue with $localUserData not representing what it should
     }
 
     function user_info()
     {
-        $this->discord->user->token ?: $this->respond(200, "Please Log In");
         $this->respond(200, $this->user);
     }
 
@@ -198,40 +172,40 @@ class APIhost extends Security
     {
         //Beware: this is an EXPENSIVE request!!
 
-        //Let's build a list of guilds relating to this user
-        $userguilds = array_map('strval', array_keys((array)$this->user->guilds));
-        foreach ($this->discordAPI->getUserGuilds() as $discordGuild)
-        {
-            in_array($discordGuild->id, $userguilds) ?: $guilds[] = $discordGuild->id;
-        }
-        
-        $guilds = array_merge($userguilds, $guilds);
-
         //This is the almighty filter... if it doesn't exist on our system, it doesn't get returned.
-        foreach ($guilds as $guildID)
+        foreach (array_unique(array_merge(array_map(function($g){return $g->id;},
+        $this->discord->user->guilds), $this->user->guilds)) as $guildID)
         {
-            if (!$this->storage->read("guilds/$guildID")->hash)
+            if ($this->storage->read("guilds/$guildID")->hash)
             {
-                unset($this->user->guilds->$guildID);
+                foreach ($this->discord->user->guilds as $i => $guild)
+                {
+                    if ($guild->id == $guildID)
+                    {
+                        $guilds[] = $this->discord->user->guilds[$i];
+                    }
+                }
             }
         }
-        $this->respond(200, $this->user->guilds);
+        //var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
+        $this->respond(200, $guilds);
     }
 
     function guild_info()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
         $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want information for?");
-        in_array($guildID, array_keys((array)$this->user->guilds)) ? $guild = $this->storage->read("guilds/$guildID")->data :
-        $this->respond(400, "Hey, don't go peeking at guilds you shouldn't.");
         $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
+
         if (!$guild->channel)
         {
-            $defaultChannel = 'giveaway';
-            $channels = $this->discordAPI->getGuildChannels($guildID);
+            $match = 'giveaway';
+            $channels = $this->discord->bot->channels->{533086391328964630}->info;
+
+            var_dump($this->discord->bot->channels->{533086391328964630}->postMessage("Kek."));
 
             var_dump($channels);
-
+            exit;
             //Make sure to only include text channels
             foreach ($channels as $channel)
             {

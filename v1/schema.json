@@ -1,8 +1,8 @@
 {
-    "login": {
-        "methods": ["GET"]
-    },
     "user": {
+        "auth": {
+            "methods": ["GET"]
+        },
         "info": {
             "methods": ["GET"]
         },
