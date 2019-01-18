@@ -102,7 +102,7 @@ class APIhost extends Security
         isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
         $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
         
-        
+
         //Get User info
         $localUserData = $this->storage->read("users/{$this->discord->user->info->id}")->data;
         $this->user = (object) array_merge(
@@ -132,24 +132,46 @@ class APIhost extends Security
                 if ($this->discord->bot->guilds->$guildID)
                 {
                     //Bot is verifiably added to this guild.
+                    $perms = $this->discord->list_permissions($_GET['permissions']);
+
+                    var_dump($perms);
+
+                    if (in_array('textSendMessages', $perms))
+                    {
+                        //Minimum required permissions set.
+                        $channel = null;
+                    }
+                    else
+                    {
+                        //Minimum required permissions not set.
+                        $channel = false;
+
+                        //$this->discord->bot->directMessage($this->user->id, "Hey there!");
+                    }
+
+                    if (!in_array('generalManageChannels', $perms))
+                    {
+                        $this->discord->bot->directMessage($this->user->id, "Hey there! I'm a little gimped without Manage Channels... i.e. I can't fix myself if something happens to my giveaway channel(s).");
+                    }
+
                     //Add guild to User's list, and instantiate it.
                     $this->user->guilds->$guildID = true;
                     $this->storage->write("guilds/$guildID", [
                         "users"     => [$this->user->id => true],
-                        "channel"   => null,
+                        "channel"   => $channel,
                         "wallet"    => 0,
                         "giveaways" => []
                     ]);
 
+
+                    //Alert to the welcome channel that we have a new member
                     $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
                         "Attention! <@".$this->user->id."> just added me to " .
                         $this->discord->bot->guilds->$guildID->name . "!"
                     );
 
-                    //$this->discordAPI->bot->postMessage("Attention! @" . $this->user->username . " just added me to $guildInfo->name!", SERVER_WELCOME);
-
                     //$this->redirect("/giftron/dashboard?setup=$guildID", false);
-                    $redirect = "/giftron#dashboard/$guildID";
+                    $redirect = "/giftron/dashboard?$guildID";
                 }
                 else
                 {
