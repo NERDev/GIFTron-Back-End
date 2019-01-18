@@ -94,6 +94,11 @@ class User extends API
         $this->timeout = ($response->expires_in + time() - ini_get('default_socket_timeout'));
         return (bool)$response;
     }
+
+    function guilds()
+    {
+        return HTTP::get("/users/@me/guilds");
+    }
 }
 
 class Channel
@@ -147,6 +152,36 @@ class Channels extends API
     }
 }
 
+class Guild
+{
+    public $token;
+    public $context;
+    public $id;
+
+    function __construct($id)
+    {
+        $this->id = $id;
+    }
+
+    function __get($n)
+    {
+        if (method_exists($this, $n))
+        {
+            return $this->$n = $this->$n();
+        }
+    }
+
+    function info()
+    {
+        return HTTP::get("/guilds/$this->id");
+    }
+
+    function channels()
+    {
+        return HTTP::get("/guilds/$this->id/channels");
+    }
+}
+
 class Guilds extends API
 {
     public $token;
@@ -156,7 +191,11 @@ class Guilds extends API
     {
         if (!in_array($n, get_class_vars($this)))
         {
-            return $this->$n = HTTP::get("/guilds/$n");
+            $this->$n = new Guild($n);
+            $this->$n->id = $n;
+            $this->$n->token = $this->token;
+            $this->$n->context = $this->context;
+            return $this->$n;
         }
     }
 }
@@ -220,13 +259,13 @@ class API
         $context = get_parent_class($this) ? (new \ReflectionClass($this))->getShortName() : ucfirst($n);
         //var_dump("Here is where \$context needs to be determined.", $context, get_parent_class($this), $this);
         
-        if (class_exists($classname))
-        {
-            return $this->$n = new $classname($context, $this->token);
-        }
-        elseif (method_exists($this, $n))
+        if (method_exists($this, $n))
         {
             return $this->$n = $this->$n();
+        }
+        elseif (class_exists($classname))
+        {
+            return $this->$n = new $classname($context, $this->token);
         }
         else
         {
