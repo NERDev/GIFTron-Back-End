@@ -87,6 +87,12 @@ class APIhost extends Security
                 $this->user = $this->storage->read("users/" . $this->session->user)->data;
                 $this->discord->user->token = $this->session->token;
             }
+            else
+            {
+                //reauth using the refresh token
+                //$this->discord->user->reauth($this->session->refreshtoken);
+                $this->respond(200, "reauthorizing...");
+            }
         }
     }
 
@@ -99,47 +105,43 @@ class APIhost extends Security
 
         if (!$this->user)
         {
-
-
             //Get User info
             $localUserData = $this->storage->read("users/{$this->discord->user->info->id}")->data;
             $this->user = (object) array_merge(
                 (array) $localUserData,
                 (array) $this->discord->user->info
             );
-            
-            //Create session for User
-            $sessionID = md5(uniqid(random_int(0,999), TRUE));
-            if ($this->storage->write("sessions/$sessionID", [
-                "user"    => $this->user->id,
-                "token"   => $this->discord->user->token,
-                "expires" => $this->discord->user->timeout,
-                "ip"      => $_SERVER['REMOTE_ADDR']
-            ])) setcookie('session', $sessionID, $this->discord->user->timeout, '/');
         }
 
+        //Create session for User
+        $sessionID = md5(uniqid(random_int(0,999), TRUE));
+        if ($this->storage->write("sessions/$sessionID", [
+            "user"    => $this->user->id,
+            "token"   => $this->discord->user->token,
+            "expires" => $this->discord->user->timeout,
+            "ip"      => $_SERVER['REMOTE_ADDR']
+        ])) setcookie('session', $sessionID, $this->discord->user->timeout, '/');
 
         //Check if User is attempting to add the bot to a guild
         if ($guildID = $_GET['guild_id'])
         {
             //Make sure it has the correct permissions.
             //Check if bot has already been added, or if this guild even exists.
-            if (!$this->storage->read("guilds/$guildID"))
+            if ($this->discord->bot->guilds->$guildID->info)
             {
-                //Bot has not been added to this guild before. It is either new or invalid.
-                if ($this->discord->bot->guilds->$guildID->info)
-                {
-                    //Bot is verifiably added to this guild.
+                //Bot is verifiably added to this guild.
 
-                    //Add guild to User's list, and instantiate it.
-                    $this->user->guilds[] = "$guildID";
+                //Add guild to User's list, and instantiate it.
+                $this->user->guilds[] = "$guildID";
+
+                if (!$this->storage->read("guilds/$guildID"))
+                {
                     $this->storage->write("guilds/$guildID", [
                         "users"     => [$this->user->id],
                         "channel"   => null,
                         "wallet"    => 0,
                         "giveaways" => []
                     ]);
-
 
                     //Alert to the welcome channel that we have a new member
                     $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
@@ -149,12 +151,19 @@ class APIhost extends Security
                 }
                 else
                 {
-                    //Bot has been removed from this guild.
                     $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
-                        "Uh oh! <@".$this->user->id."> just tried to add me to $guildID, but I'm not in that guild.
-                        Something's wrong."
+                        "Attention! <@".$this->user->id."> just added me back to " .
+                        $this->discord->bot->guilds->$guildID->info->name . "!"
                     );
                 }
+            }
+            else
+            {
+                //Bot has been removed from this guild.
+                $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                    "Uh oh! <@".$this->user->id."> just tried to add me to $guildID, but I'm not in that guild.
+                    Something's wrong."
+                );
             }
         }
 
@@ -175,6 +184,11 @@ class APIhost extends Security
         //Beware: this is an EXPENSIVE request!!
 
         //This is the almighty filter... if it doesn't exist on our system, it doesn't get returned.
+        if (!$this->discord->user->guilds)
+        {
+            $this->respond(400, "Unable to load guilds... Check permissions");
+        }
+        
         foreach (array_unique(array_merge(array_map(function($g){return $g->id;},
         $this->discord->user->guilds), $this->user->guilds)) as $guildID)
         {
@@ -202,42 +216,52 @@ class APIhost extends Security
         if (!$guild->channel)
         {
             $match = 'giveaway';
-            $channels = $this->discord->bot->guilds->$guildID->info;
+            $channels = $this->discord->bot->guilds->$guildID->channels;
 
-            //var_dump($this->discord->bot->channels->{533086391328964630}->postMessage("Kek."));
-
-            var_dump($this->discord->bot->channels->{533086391328964630}->info);
-
-            var_dump($channels);
-            exit;
-            //Make sure to only include text channels
-            foreach ($channels as $channel)
+            foreach ($channels as $i => $channel)
             {
+                if ($channel->type == 4)
+                {
+                    $categories[$channel->id];
+                }
+
                 if ($channel->type == 0)
                 {
-                    $textChannels[$channel->id] = $channel->name;
+                    $availableChannels[$channel->id] = $channel->name;
+                    $categories[$channel->parent_id ?? $channel->guild_id][] = $channel;
                 }
             }
 
+            //Make sure to only include text channels
 
-            //Figure out which text channel has the best match
-            $bestsim = 50;
-            foreach ($textChannels as $id => $name)
+            foreach ($channels as $channel)
             {
-                similar_text($name, $defaultChannel, $sim);
-                if ($sim > $bestsim)
+                if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $channel->name)), $match))
                 {
-                    $bestsim = $sim;
-                    $suggestedChannel = [$id => $name];
+                    if ($channel->type == 0)
+                    {
+                        $suggestedChannels[$channel->id] = $channel->name;
+                    }
+
+                    if ($channel->type == 4)
+                    {
+                        foreach ($categories[$channel->id] as $child)
+                        {
+                            $suggestedChannels[$child->id] = $child->name;
+                        }
+                    }
                 }
             }
-            
+
             $guild->setup = [
-                "channel" => [
-                    "suggested" => $suggestedChannel,
-                    "available" => $textChannels
+                "channel".(count($suggestedChannels) == 1?"":"s") => [
+                    "suggested" => $suggestedChannels,
+                    "available" => array_diff($availableChannels, $suggestedChannels)
                 ]
             ];
+            //var_dump($channels);
+            //var_dump($categories);
+
         }
         $this->respond(200, $guild);
         //var_dump($this->discordAPI->getUserGuilds());
