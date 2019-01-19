@@ -218,6 +218,9 @@ class APIhost extends Security
             $match = 'giveaway';
             $channels = $this->discord->bot->guilds->$guildID->channels;
 
+
+            //Build tree of channels
+
             foreach ($channels as $i => $channel)
             {
                 if ($channel->type == 4)
@@ -232,7 +235,7 @@ class APIhost extends Security
                 }
             }
 
-            //Make sure to only include text channels
+            //Obtain list of suggested channels
 
             foreach ($channels as $channel)
             {
@@ -247,7 +250,10 @@ class APIhost extends Security
                     {
                         foreach ($categories[$channel->id] as $child)
                         {
-                            $suggestedChannels[$child->id] = $child->name;
+                            if ($child->type == 0)
+                            {
+                                $suggestedChannels[$child->id] = $child->name;
+                            }
                         }
                     }
                 }
@@ -264,9 +270,6 @@ class APIhost extends Security
 
         }
         $this->respond(200, $guild);
-        //var_dump($this->discordAPI->getUserGuilds());
-        //var_dump($this->discordAPI->getGuildInfo($guildID));
-        //var_dump($this->discordAPI->postMessage("Hi Carrot", 525404638552391682));
     }
 
     function guild_configure()
