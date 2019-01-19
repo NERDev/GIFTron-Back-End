@@ -93,10 +93,12 @@ class APIhost extends Security
     function user_auth()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
+
+        isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
+        $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
+
         if (!$this->user)
         {
-            isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
-            $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
 
 
             //Get User info
@@ -200,9 +202,11 @@ class APIhost extends Security
         if (!$guild->channel)
         {
             $match = 'giveaway';
-            $channels = $this->discord->bot->channels->{533086391328964630}->info;
+            $channels = $this->discord->bot->guilds->$guildID->info;
 
-            var_dump($this->discord->bot->channels->{533086391328964630}->postMessage("Kek."));
+            //var_dump($this->discord->bot->channels->{533086391328964630}->postMessage("Kek."));
+
+            var_dump($this->discord->bot->channels->{533086391328964630}->info);
 
             var_dump($channels);
             exit;
