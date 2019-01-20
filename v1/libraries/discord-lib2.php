@@ -152,7 +152,7 @@ class Channels extends API
     }
 }
 
-class Guild
+class Member
 {
     public $token;
     public $context;
@@ -168,6 +168,62 @@ class Guild
         if (method_exists($this, $n))
         {
             return $this->$n = $this->$n();
+        }
+    }
+
+    function info()
+    {
+        return HTTP::get("/guilds/$this->guildid/members/$this->id");
+    }
+}
+
+class Members
+{
+    public $token;
+    public $context;
+
+    function __get($n)
+    {
+        if (!in_array($n, get_class_vars($this)))
+        {
+            $this->$n = new Member($n);
+            $this->$n->token = $this->token;
+            $this->$n->context = $this->context;
+            $this->$n->guildid = $this->guildid;
+            return $this->$n;
+        }
+    }
+}
+
+class Guild
+{
+    public $token;
+    public $context;
+    public $id;
+
+    function __construct($id)
+    {
+        $this->id = $id;
+    }
+
+    function __get($n)
+    {
+        $classname = __NAMESPACE__ . "\\$n";
+        if (method_exists($this, $n))
+        {
+            return $this->$n = $this->$n();
+        }
+        elseif (class_exists($classname))
+        {
+            $this->$n = new $classname();
+            $this->$n->token = $this->token;
+            $this->$n->context = $this->context;
+            $this->$n->guildid = $this->id;
+            return $this->$n;
+        }
+        else
+        {
+            return false;
         }
     }
 
