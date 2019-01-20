@@ -137,7 +137,7 @@ class APIhost extends Security
                 if (!$this->storage->read("guilds/$guildID"))
                 {
                     $this->storage->write("guilds/$guildID", [
-                        "users"     => [$this->user->id],
+                        //"users"     => [$this->user->id],
                         "channel"   => null,
                         "wallet"    => 0,
                         "giveaways" => []
@@ -218,57 +218,69 @@ class APIhost extends Security
             $match = 'giveaway';
             $channels = $this->discord->bot->guilds->$guildID->channels;
 
-
-            //Build tree of channels
-
-            foreach ($channels as $i => $channel)
+            if ($channels)
             {
-                if ($channel->type == 4)
+                //Build tree of channels
+
+                foreach ($channels as $i => $channel)
                 {
-                    $categories[$channel->id];
-                }
-
-                if ($channel->type == 0)
-                {
-                    $availableChannels[$channel->id] = $channel->name;
-                    $categories[$channel->parent_id ?? $channel->guild_id][] = $channel;
-                }
-            }
-
-            //Obtain list of suggested channels
-
-            foreach ($channels as $channel)
-            {
-                if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $channel->name)), $match))
-                {
-                    if ($channel->type == 0)
-                    {
-                        $suggestedChannels[$channel->id] = $channel->name;
-                    }
-
                     if ($channel->type == 4)
                     {
-                        foreach ($categories[$channel->id] as $child)
+                        $categories[$channel->id];
+                    }
+
+                    if ($channel->type == 0)
+                    {
+                        $availableChannels[$channel->id] = $channel->name;
+                        $categories[$channel->parent_id ?? $channel->guild_id][] = $channel;
+                    }
+                }
+
+                //Obtain list of suggested channels
+
+                foreach ($channels as $channel)
+                {
+                    if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $channel->name)), $match))
+                    {
+                        if ($channel->type == 0)
                         {
-                            if ($child->type == 0)
+                            $suggestedChannels[$channel->id] = $channel->name;
+                        }
+
+                        if ($channel->type == 4)
+                        {
+                            foreach ($categories[$channel->id] as $child)
                             {
-                                $suggestedChannels[$child->id] = $child->name;
+                                if ($child->type == 0)
+                                {
+                                    $suggestedChannels[$child->id] = $child->name;
+                                }
                             }
                         }
                     }
                 }
+
+                $guild->setup = [
+                    "channels" => [
+                        "suggested" => $suggestedChannels,
+                        "available" => array_diff($availableChannels, $suggestedChannels)
+                    ]
+                ];
             }
-
-            $guild->setup = [
-                "channel".(count($suggestedChannels) == 1?"":"s") => [
-                    "suggested" => $suggestedChannels,
-                    "available" => array_diff($availableChannels, $suggestedChannels)
-                ]
-            ];
-            //var_dump($channels);
-            //var_dump($categories);
-
+            else
+            {
+                if (!$this->discord->bot->guilds->$guildID->info)
+                {
+                    $guild->setup = [
+                        "guild" => [
+                            "add"
+                        ]
+                    ];
+                }
+            }
         }
+        
+        //var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
         $this->respond(200, $guild);
     }
 
