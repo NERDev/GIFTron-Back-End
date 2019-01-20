@@ -287,12 +287,11 @@ class APIhost extends Security
     function guild_configure()
     {
         $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want to configure?");
-        $this->user->guilds->$guildID ? $guild = $this->storage->read("guilds/$guildID")->data :
-        $this->respond(400, "Hey, don't go meddling with guilds you shouldn't.");
-        $guildInfo = $this->discordAPI->getGuildInfo($guildID);
-        var_dump($guildInfo);
+        $guild = $this->storage->read("guilds/$guildID")->data;
+        var_dump($_POST);
         var_dump($guild);
-        var_dump($this->user);
+
+        var_dump($this->permitted($guildID));
     }
 
     function schedule_new()
