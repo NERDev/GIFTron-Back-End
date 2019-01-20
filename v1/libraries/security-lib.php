@@ -63,6 +63,41 @@ class Security
     {
         
     }
+    
+    function permitted($guildID)
+    {
+        $owner = $this->discord->bot->guilds->$guildID->info->owner_id == $this->user->id;
+        //build table of roles and permissions
+        foreach ($this->discord->bot->guilds->$guildID->info->roles as $role)
+        {
+            if ($role->managed && $role->name == "GIFTron-Management")
+            {
+                //This is the best I can come up with for figuring out own damn role ID. Shoot me.
+                $giftron_role = $role->id;
+            }
+
+            $serverRoles[$role->id] = $role->permissions;
+        }
+
+        //check if user's a part of the GIFTron role
+        if (in_array($giftron_role, $this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles))
+        {
+            return true;
+        }
+
+        //lookup permissions of roles user is a part of
+        //first, get every role for the user
+        foreach ($this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles as $role)
+        {
+            //next, get the permissions for this role
+            foreach($this->discord->list_permissions($serverRoles[$role]) as $perm)
+            {
+                in_array($perm, $perms) ?: $perms[] = $perm;
+            }
+        }
+
+        return $perms;
+    }
 
     //Old Hash Function
     /*
