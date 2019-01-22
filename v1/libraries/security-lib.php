@@ -70,37 +70,44 @@ class Security
 
         if ($owner)
         {
-            return true;
+            return "this user is owner";
         }
 
+        //check if user's in an access role
         $guild = $this->storage->read("guilds/$guildID")->data;
-
-        //build table of roles and permissions
-        foreach ($this->discord->bot->guilds->$guildID->info->roles as $role)
+        if ($guild->settings->access_roles && array_intersect($guild->settings->access_roles, $this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles))
         {
-            if (array_intersect())
-
-            $serverRoles[$role->id] = $role->permissions;
+            return "this user is in one or more access role";
         }
 
-        //check if user's a part of the GIFTron role
-        if (in_array($giftron_role, $this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles))
+        if (!$guild->settings->strict)
         {
-            return true;
-        }
-
-        //lookup permissions of roles user is a part of
-        //first, get every role for the user
-        foreach ($this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles as $role)
-        {
-            //next, get the permissions for this role
-            foreach($this->discord->list_permissions($serverRoles[$role]) as $perm)
+            //build table of roles and permissions
+            foreach ($this->discord->bot->guilds->$guildID->info->roles as $role)
             {
-                in_array($perm, $perms) ?: $perms[] = $perm;
+                $serverRoles[$role->id] = $role->permissions;
+            }
+
+
+            //lookup permissions of roles user is a part of
+            //first, get every role for the user
+            foreach ($this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles as $role)
+            {
+                //next, get the permissions for this role
+                foreach($this->discord->list_permissions($serverRoles[$role]) as $perm)
+                {
+                    in_array($perm, $perms) ?: $perms[] = $perm;
+                }
+            }
+
+            if (array_intersect(["generalAdministrator", "generalManageServer"], $perms))
+            {
+                return "this user has sufficient privileges, and 'strict' is not set for the server";
             }
         }
 
-        return $perms;
+        //none of the conditions were met: this user is not permitted
+        return false;
     }
 
     //Old Hash Function
