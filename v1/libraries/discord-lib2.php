@@ -40,7 +40,7 @@ abstract class HTTP
     static function get($url)
     {
         //var_dump("Executing GET on $url");
-        self::$requests++;
+        self::$requests[] = $url;
 
         $prevobj = debug_backtrace()[1]['object'];
         $tokentype = self::type(explode('/', $prevobj->context)[0]);
@@ -55,7 +55,7 @@ abstract class HTTP
     static function post($url, $data)
     {
         //var_dump("Executing POST on $url");
-        self::$requests++;
+        self::$requests[] = $url;
 
         $prevobj = debug_backtrace()[1]['object'];
         $tokentype = self::type(explode('/', $prevobj->context)[0]);
