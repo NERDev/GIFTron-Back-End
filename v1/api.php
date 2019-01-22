@@ -138,8 +138,11 @@ class APIhost extends Security
                 {
                     $this->storage->write("guilds/$guildID", [
                         //"users"     => [$this->user->id],
-                        "channels"     => null,
-                        "access_roles" => null,
+                        "settings"     => [
+                            "channels"     => null,
+                            "access_roles" => null,
+                            "strict"       => false
+                        ],
                         "wallet"       => 0,
                         "giveaways"    => []
                     ]);
@@ -214,7 +217,7 @@ class APIhost extends Security
         $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want information for?");
         $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
 
-        if (!$guild->channels)
+        if (!$guild->settings->channels)
         {
             $match = 'giveaway';
             $channels = $this->discord->bot->guilds->$guildID->channels;
@@ -264,7 +267,7 @@ class APIhost extends Security
                 $guild->setup[] = [
                     "channels" => [
                         "suggested" => $suggestedChannels,
-                        "available" => array_diff($availableChannels, $suggestedChannels)
+                        "available" => array_diff($availableChannels, (array)$suggestedChannels)
                     ]
                 ];
             }
@@ -281,9 +284,9 @@ class APIhost extends Security
             }
         }
 
-        if ($guild->access_roles === null)
+        if ($guild->settings->access_roles === null)
         {
-            $matches = ["admin", "owner", "kek"];
+            $matches = ["admin", "owner"];
             $roles = $this->discord->bot->guilds->$guildID->info->roles;
 
             if ($roles)
@@ -303,9 +306,9 @@ class APIhost extends Security
                 }
 
                 $guild->setup[] = [
-                    "roles" => [
+                    "access_roles" => [
                         "suggested" => $suggestedRoles,
-                        "available" => array_diff($availableRoles, $suggestedRoles)
+                        "available" => array_diff($availableRoles, (array)$suggestedRoles)
                     ]
                 ];
             }
@@ -328,12 +331,40 @@ class APIhost extends Security
 
     function guild_configure()
     {
+        error_reporting(E_ALL); ini_set('display_errors', 1);
         $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want to configure?");
-        $guild = $this->storage->read("guilds/$guildID")->data;
-        var_dump($_POST);
-        var_dump($guild);
+        $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild on file. Are you sure you have the right ID?");
+        $this->permitted($guildID) ?: $this->respond(403, "Hey, don't go configuring guilds without permission. Go ask someone for access.");
+        $settings = json_decode(file_get_contents("php://input"));
 
-        var_dump($this->permitted($guildID));
+        foreach ($settings as $name => $value)
+        {
+            if (!in_array($name, array_keys(get_object_vars($guild->settings))))
+            {
+                unset($settings->$name);
+                continue;
+            }
+            
+            if ($name == "channels")
+            {
+                foreach ((array)$value as $i => $channel)
+                {
+                    if (!in_array($channel, array_column($this->discord->bot->guilds->$guildID->channels, 'id')))
+                    {
+                        unset($settings->$name[$i]);
+                    }
+                }
+                //reindex, stringify
+                $settings->$name = array_map('strval', array_values($settings->$name));
+            }
+        }
+
+        //var_dump(array_column($this->discord->bot->guilds->$guildID->channels, 'name', 'id'));
+
+        $guild->settings = array_merge((array)$guild->settings, (array)$settings);
+        $this->storage->write("guilds/$guildID", $guild);
+        var_dump($guild);
+        //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
     }
 
     function schedule_new()
