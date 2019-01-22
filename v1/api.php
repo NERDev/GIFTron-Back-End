@@ -357,6 +357,19 @@ class APIhost extends Security
                 //reindex, stringify
                 $settings->$name = array_map('strval', array_values($settings->$name));
             }
+
+            if ($name == "access_roles")
+            {
+                foreach ((array)$value as $i => $role)
+                {
+                    if (!in_array($role, array_column($this->discord->bot->guilds->$guildID->info->roles, 'id')))
+                    {
+                        unset($settings->$name[$i]);
+                    }
+                }
+                //reindex, stringify
+                $settings->$name = array_map('strval', array_values($settings->$name));
+            }
         }
 
         //var_dump(array_column($this->discord->bot->guilds->$guildID->channels, 'name', 'id'));
