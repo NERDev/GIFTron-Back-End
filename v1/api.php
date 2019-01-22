@@ -138,9 +138,10 @@ class APIhost extends Security
                 {
                     $this->storage->write("guilds/$guildID", [
                         //"users"     => [$this->user->id],
-                        "channels"   => null,
-                        "wallet"    => 0,
-                        "giveaways" => []
+                        "channels"     => null,
+                        "access_roles" => null,
+                        "wallet"       => 0,
+                        "giveaways"    => []
                     ]);
 
                     //Alert to the welcome channel that we have a new member
@@ -260,10 +261,51 @@ class APIhost extends Security
                     }
                 }
 
-                $guild->setup = [
+                $guild->setup[] = [
                     "channels" => [
                         "suggested" => $suggestedChannels,
                         "available" => array_diff($availableChannels, $suggestedChannels)
+                    ]
+                ];
+            }
+            else
+            {
+                if (!$this->discord->bot->guilds->$guildID->info)
+                {
+                    $guild->setup = [
+                        "guild" => [
+                            "add"
+                        ]
+                    ];
+                }
+            }
+        }
+
+        if ($guild->access_roles === null)
+        {
+            $matches = ["admin", "owner", "kek"];
+            $roles = $this->discord->bot->guilds->$guildID->info->roles;
+
+            if ($roles)
+            {
+                //Obtain list of suggested channels
+                foreach ($roles as $role)
+                {
+                    $availableRoles[$role->id] = $role->name;
+
+                    foreach ($matches as $match)
+                    {
+                        if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $role->name)), $match))
+                        {
+                            $suggestedRoles[$role->id] = $role->name;
+                        }
+                    }
+                }
+
+                $guild->setup[] = [
+                    "roles" => [
+                        "suggested" => $suggestedRoles,
+                        "available" => array_diff($availableRoles, $suggestedRoles)
                     ]
                 ];
             }
