@@ -67,14 +67,18 @@ class Security
     function permitted($guildID)
     {
         $owner = $this->discord->bot->guilds->$guildID->info->owner_id == $this->user->id;
+
+        if ($owner)
+        {
+            return true;
+        }
+
+        $guild = $this->storage->read("guilds/$guildID")->data;
+
         //build table of roles and permissions
         foreach ($this->discord->bot->guilds->$guildID->info->roles as $role)
         {
-            if ($role->managed && $role->name == "GIFTron-Management")
-            {
-                //This is the best I can come up with for figuring out own damn role ID. Shoot me.
-                $giftron_role = $role->id;
-            }
+            if (array_intersect())
 
             $serverRoles[$role->id] = $role->permissions;
         }
