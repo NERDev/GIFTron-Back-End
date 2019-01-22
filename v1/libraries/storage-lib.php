@@ -7,6 +7,13 @@ class StorageNode extends Storage
 {
     function read($location)
     {
+        $cachedData = str_replace('/', '_', $location);
+
+        if ($this->$cachedData)
+        {
+            return $cachedData;
+        }
+
         //read from local storage and compare to remote
         //if different, overwrite whichever is older with whichever is newer
         $filename = array_pop(explode('/', $location));
@@ -22,7 +29,7 @@ class StorageNode extends Storage
             return $this->mediate($server0, $server1, $location);
         }
 
-        return $this->local_read($location);
+        return $this->$cachedData = $this->local_read($location);
     }
 
     function write($location, $data)
