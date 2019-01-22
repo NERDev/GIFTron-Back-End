@@ -138,7 +138,7 @@ class APIhost extends Security
                 {
                     $this->storage->write("guilds/$guildID", [
                         //"users"     => [$this->user->id],
-                        "channel"   => null,
+                        "channels"   => null,
                         "wallet"    => 0,
                         "giveaways" => []
                     ]);
@@ -213,7 +213,7 @@ class APIhost extends Security
         $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want information for?");
         $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
 
-        if (!$guild->channel)
+        if (!$guild->channels)
         {
             $match = 'giveaway';
             $channels = $this->discord->bot->guilds->$guildID->channels;
