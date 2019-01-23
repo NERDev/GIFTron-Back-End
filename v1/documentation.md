@@ -23,11 +23,9 @@ This returns a Discord OAuth2 URL with which the user may use to authenticate.
 The Guild object represents the guild specified by its `id` in the querystring as it appears in our system.
 ## Configure
 #### POST /guild/configure
-|         Querystring Params         |
-| ---------------------------------- |
-| Field         | Required | Default |
-| ------------- | -------- | ------- |
-| guild_id*     | True     |         |
+| Field | Required | Default |
+| ------------- | ------------- |
+| guild_id*  | true  | null |
 ## Users
 #### GET /guild/users
 
