@@ -50,4 +50,4 @@ Settings for the API are for NERDev staff only. These endpoints are not availabl
 #### POST /settings/credentials
 ## Whitelist
 #### GET /settings/whitelist
-This will lookup the currently-set IP addresses and add them to the list of IP addresses considered part of our infrastructure.
+This will lookup the current IP of each of our core servers and add them to the list of addresses considered part of our infrastructure.
