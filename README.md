@@ -1,16 +1,16 @@
 
 # GIFTron API
 
-## User
+# User
 
-### Info
-### Guilds
-### Auth
+## Info
+## Guilds
+## Auth
 
-## Guild
+# Guild
 
-### Info
-### Configure
-### Users
-### Schedule
-### Wallet
+## Info
+## Configure
+## Users
+## Schedule
+## Wallet
