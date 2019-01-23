@@ -422,32 +422,31 @@ class APIhost extends Security
 
 function build()
 {
+    define('FSROOT', realpath("../../../../webroot/giftron/api/v1"));
     function recurse($struct, $parent = null)
     {
-        $apiroot = realpath("../../../../webroot/giftron/api/v1");
+        if (isset($struct->methods))
+        {
+            file_put_contents(getcwd() . "/index.php", $GLOBALS['seed']);
+        }
+
         foreach($struct as $name => $properties)
         {
-            chdir($parent ?? $apiroot);
-
             if (gettype($properties) == "object")
             {
-                mkdir($name);
-                if ($properties->methods)
-                {
-                    file_put_contents("$name/index.php", $GLOBALS['seed']);
-                }
-                else
-                {
-                    recurse($properties, $name);
-                }
+                $dirname = getcwd() . "/$name";
+                mkdir($dirname);
+                chdir($dirname);
+                recurse($properties, $name);
             }
         }
+        chdir("../");
     }
     
     echo "building API tree\n";
     $GLOBALS['seed'] = file_get_contents("seed.php");
     $schema = json_decode(file_get_contents("schema.json"));
-    chdir(realpath("../../../../webroot/giftron/api/v1"));
+    chdir(FSROOT);
     recurse($schema);
 }
 
