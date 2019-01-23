@@ -21,10 +21,15 @@
             "methods": ["GET"]
         },
         "schedule": {
-            "new": {
-                "methods": ["POST", "GET"]
+            "add": {
+                "giveaway": {
+                    "methods": ["POST", "GET"]
+                }
             },
             "check": {
+                "giveaway": {
+                    "methods": ["GET"]
+                },
                 "methods": ["GET"]
             }
         }
