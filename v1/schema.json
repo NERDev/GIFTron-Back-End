@@ -32,6 +32,14 @@
                 },
                 "methods": ["GET"]
             }
+        },
+        "wallet": {
+            "methods": ["GET", "PUT"]
+        }
+    },
+    "order": {
+        "fill": {
+            "methods": ["GET", "PUT"]
         }
     },
     "storage": {

@@ -24,4 +24,14 @@ This returns a Discord OAuth2 URL with which the user may use to authenticate.
 ## Configure
 ## Users
 ## Schedule
+### Check
+### Check Giveaway
+### Add Giveaway
 ## Wallet
+
+# Order
+## Fill
+
+# Shard
+
+# 
