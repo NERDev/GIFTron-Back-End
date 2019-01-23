@@ -48,3 +48,6 @@ The Guild object represents the guild specified by its `id` in the querystring a
 Settings for the API are for NERDev staff only. These endpoints are not available to the general public.
 ## Credentials
 #### POST /settings/credentials
+## Whitelist
+#### GET /settings/whitelist
+This will lookup the currently-set IP addresses and add them to the list of IP addresses considered part of our infrastructure.
