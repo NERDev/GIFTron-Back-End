@@ -357,8 +357,7 @@ class APIhost extends Security
                 //reindex, stringify
                 $settings->$name = array_map('strval', array_values($settings->$name));
             }
-
-            if ($name == "access_roles")
+            elseif ($name == "access_roles")
             {
                 foreach ((array)$value as $i => $role)
                 {
@@ -369,6 +368,19 @@ class APIhost extends Security
                 }
                 //reindex, stringify
                 $settings->$name = array_map('strval', array_values($settings->$name));
+            }
+            elseif ($name == "strict")
+            {
+                //verify boolean
+                if (is_bool($settings->$name))
+                {
+                    $settings->$name = boolval($settings->$name);
+                }
+                else
+                {
+                    //isn't a boolean, so disregard
+                    unset($settings->$name);
+                }
             }
         }
 
