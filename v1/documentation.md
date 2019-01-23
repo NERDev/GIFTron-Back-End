@@ -19,22 +19,22 @@ This returns a Discord OAuth2 URL with which the user may use to authenticate.
 
 
 # Guild
-#### GET /guild/?{guild.id}
+#### GET /guild
 The Guild object represents the guild specified by its `id` in the querystring as it appears in our system.
 ## Configure
-#### POST /guild/configure/?{guild.id}
+#### POST /guild/configure
 
 ## Users
-#### GET /guild/users/?{guild.id}
+#### GET /guild/users
 
 ## Schedule
-#### GET /guild/schedule/?{guild.id}
+#### GET /guild/schedule
 
 ### Query Giveaway
-#### GET /guild/schedule/giveaway/?{giveaway.id}
+#### GET /guild/schedule/giveaway
 
 ### Create Giveaway
-#### POST /guild/schedule/giveaway/?{guild.id}
+#### POST /guild/schedule/giveaway
 
 
 ## Wallet
