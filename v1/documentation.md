@@ -18,15 +18,26 @@ This returns a list of guilds that relate to both the user, and to our system. S
 #### GET /user/auth
 This returns a Discord OAuth2 URL with which the user may use to authenticate.
 
-# Guild
 
-## Info
+# Guild
+#### GET /guild/?{guild.id}
+The Guild object represents the guild specified by its `id` in the querystring as it appears in our system.
 ## Configure
+#### POST /guild/configure/?{guild.id}
+
 ## Users
+#### GET /guild/users/?{guild.id}
+
 ## Schedule
-### Check
+#### GET /guild/schedule/?{guild.id}
+
 ### Check Giveaway
+#### GET /guild/schedule/giveaway/?{giveaway.id}
+
 ### Add Giveaway
+#### POST /guild/schedule/giveaway/?{guild.id}
+
+
 ## Wallet
 
 # Order
