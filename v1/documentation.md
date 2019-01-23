@@ -31,10 +31,10 @@ The Guild object represents the guild specified by its `id` in the querystring a
 ## Schedule
 #### GET /guild/schedule/?{guild.id}
 
-### Check Giveaway
+### Query Giveaway
 #### GET /guild/schedule/giveaway/?{giveaway.id}
 
-### Add Giveaway
+### Create Giveaway
 #### POST /guild/schedule/giveaway/?{guild.id}
 
 
