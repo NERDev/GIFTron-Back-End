@@ -1,4 +1,3 @@
-
 # GIFTron API
 ### Disclaimer
 This documentation is only intended for internal use, and to provide operational transparency. No attempt is being made to support third-party deployments or implementation of this application, nor is NERDev responsible for accidental changes to production data.
@@ -45,4 +44,7 @@ The Guild object represents the guild specified by its `id` in the querystring a
 
 # Shard
 
-# 
+# Settings
+Settings for the API are for NERDev staff only. These endpoints are not available to the general public.
+## Credentials
+#### POST /settings/credentials
