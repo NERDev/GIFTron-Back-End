@@ -24,7 +24,7 @@ The Guild object represents the guild specified by its `id` in the querystring a
 ## Configure
 #### POST /guild/configure
 |    Field     | Description    | Required      | Default       |
-| :---         | :---           | :---          | :---          |
+| ---         | ---           | ---          | ---          |
 | guild_id*    | the id         | true          | null          |
 ## Users
 #### GET /guild/users
