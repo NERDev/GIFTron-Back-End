@@ -21,8 +21,12 @@ This returns a Discord OAuth2 URL with which the user may use to authenticate.
 # Guild
 #### GET /guild
 The Guild object represents the Guild specified by its `id` in the querystring as it appears in our system.
-## Configure
-#### POST /guild/configure
+
+| Field        | Description                                         | Required      | Default       |
+| ---          | ---                                                 | ---           | ---           |
+| guild_id*    | Discord Guild id                                    | true          |               |
+
+#### POST /guild
 
 Updates the Guild configuration according to the parameters given.
 
@@ -33,7 +37,7 @@ Updates the Guild configuration according to the parameters given.
 | access_roles | Access roles                                        | false         | inherited     |
 | strict       | Restrict access to only access role members         | false         | inherited     |
 
-
+Note: only the fields specified will be affected. If a field is omitted, it will not be changed from its current state.
 
 ## Users
 #### GET /guild/users
