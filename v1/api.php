@@ -73,7 +73,7 @@ class APIhost extends Security
         try {
             $this->discord = new DiscordLib\API($credentials);
         } catch (Exception $e) {
-            $this->respond(500, $e->getMessage());
+            $this->respond(503, $e->getMessage());
         }
         
         $this->storage = new StorageNode;
@@ -151,7 +151,12 @@ class APIhost extends Security
                 //Bot is verifiably added to this guild.
 
                 //Add guild to User's list, and instantiate it.
-                $this->user->guilds[] = "$guildID";
+                if (!in_array($guildID, $this->user->guilds))
+                {
+                    $this->user->guilds[] = "$guildID";
+                }
+
+                //var_dump($this->storage->read("guilds/$guildID"));
 
                 if (!$this->storage->read("guilds/$guildID"))
                 {
@@ -167,17 +172,19 @@ class APIhost extends Security
                     ]);
 
                     //Alert to the welcome channel that we have a new member
-                    $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                    var_dump("addnew", $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
                         "Attention! <@".$this->user->id."> just added me to " .
                         $this->discord->bot->guilds->$guildID->info->name . "!"
-                    );
+                    ));
                 }
                 else
                 {
-                    $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                    /*
+                    var_dump("addback", $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
                         "Attention! <@".$this->user->id."> just added me back to " .
                         $this->discord->bot->guilds->$guildID->info->name . "!"
-                    );
+                    ));
+                    */
                 }
             }
             else
@@ -194,7 +201,7 @@ class APIhost extends Security
         //Check if User has been updated with new information
         var_dump($this->user);
         $this->storage->write("users/" . $this->user->id, $this->user);
-        var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
+        var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.");
     }
 
     function user_info()
@@ -378,24 +385,39 @@ class APIhost extends Security
                 }
                 elseif ($name == "access_roles")
                 {
-                    foreach ((array)$value as $i => $role)
+                    $settings->$name = filter_var($settings->$name, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $settings->$name;
+                    if ($settings->$name !== false)
                     {
-                        if (!in_array($role, array_column($this->discord->bot->guilds->$guildID->info->roles, 'id')))
+                        foreach ((array)$value as $i => $role)
                         {
-                            unset($settings->$name[$i]);
+                            if (!in_array($role, array_column($this->discord->bot->guilds->$guildID->info->roles, 'id')))
+                            {
+                                if (is_array($settings->$name))
+                                {
+                                    unset($settings->$name[$i]);
+                                }
+                                else
+                                {
+                                    unset($settings->$name);                                    
+                                }
+                            }
                         }
-                    }
-                    //reindex, stringify
-                    $settings->$name = array_map('strval', array_values($settings->$name));
+
+                        if (count($settings->$name))
+                        {
+                            //reindex, stringify
+                            $settings->$name = array_map('strval', array_values($settings->$name));
+                        }
+                        else
+                        {
+                            //no valid access_roles passed, ignore
+                            unset($settings->$name);
+                        }
+                    }                    
                 }
                 elseif ($name == "strict")
                 {
-                    //verify boolean
-                    if (is_bool($settings->$name))
-                    {
-                        $settings->$name = boolval($settings->$name);
-                    }
-                    else
+                    if (!is_bool($settings->$name))
                     {
                         //isn't a boolean, so disregard
                         unset($settings->$name);
