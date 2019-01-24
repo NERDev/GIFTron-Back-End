@@ -35,8 +35,8 @@ Updates the Guild configuration according to the parameters given.
 | Field        | Description                                           | Required      | Default       |
 | ---          | ---                                                   | ---           | ---           |
 | guild_id*    | Discord Guild id                                      | true          |               |
-| channels     | Discord Channels to use for Giveaways                 | false         | inherited     |
-| access_roles | Discord Roles to use for allowing access to GIFTron   | false         | inherited     |
+| channels     | Discord Channel(s) to use for Giveaways               | false         | inherited     |
+| access_roles | Discord Role(s) to use for allowing access to GIFTron | false         | inherited     |
 | strict       | Restrict access to only Access Role members           | false         | inherited     |
 
 Note: only the fields specified will be affected. If a field is omitted, it will not be changed from its current state.
@@ -84,6 +84,15 @@ Note: only the fields specified will be affected. If a field is omitted, it will
 Settings for the API are for NERDev staff only. These endpoints are not available to the general public.
 ## Credentials
 #### POST /settings/credentials
+This endpoint is for updating the credentials of the servers, in the event that one of the fields has changed.
+Note that this endpoint does not authenticate using Discord.
+
+| Field        | Description                                           | Required      | Default       |
+| ---          | ---                                                   | ---           | ---           |
+| clientId     | The ID of the GIFTron Discord application             | false         | inherited     |
+| clientSecret | The Secret Key of the GIFTron Discord application     | false         | inherited     |
+| botToken     | The Token of the GIFTron Bot, under GIFTron           | false         | inherited     |
+
 ## Whitelist
 #### GET /settings/whitelist
 This will lookup the current IP of each of our core servers and add them to the list of addresses considered part of our infrastructure.
