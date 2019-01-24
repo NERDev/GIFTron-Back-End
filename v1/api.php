@@ -204,7 +204,7 @@ class APIhost extends Security
         var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.");
     }
 
-    function user_info()
+    function user()
     {
         $this->respond(200, $this->user);
     }
@@ -421,11 +421,27 @@ class APIhost extends Security
             }
 
             //var_dump(array_column($this->discord->bot->guilds->$guildID->channels, 'name', 'id'));
-
-            $guild->settings = array_merge((array)$guild->settings, (array)$settings);
+            
+            $newsettings = array_merge((array)$guild->settings, (array)$settings);
+            $danger_will_robinson = !(($guild->settings->access_roles == $newsettings['access_roles']) && ($guild->settings->strict == $newsettings['strict']));
+            $guild->settings = $newsettings;
             $this->storage->write("guilds/$guildID", $guild);
-            var_dump($guild);
-            //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
+
+
+            if ($danger_will_robinson && !$guild->settings->access_roles && $guild->settings['strict'] && $this->user->id != $this->discord->bot->guilds->$guildID->info->owner_id)
+            {
+                //Settings were changed
+                //Access roles are false
+                //Strict is set
+                //User is not owner
+                //Yep, user is a numbskull: locked everyone out but the owner
+                var_dump("numbskull");
+                $this->discord->bot->directMessage($this->discord->bot->guilds->$guildID->info->owner_id,
+                    "Hey, <@".$this->user->id."> just locked everyone but you out of {$this->discord->bot->guilds->$guildID->info->name}'s GIFTron Dashboard. Thought you should know."
+                );
+            }
+            var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
+            $this->respond(200, $guild);
         }
     }
 
