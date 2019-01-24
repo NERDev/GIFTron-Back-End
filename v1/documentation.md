@@ -2,7 +2,7 @@
 ### Disclaimer
 This documentation is only intended for internal use, and to provide operational transparency. No attempt is being made to support third-party deployments or implementation of this application, nor is NERDev responsible for accidental changes to production data.
 
-#### Introduction
+### Introduction
 stuff
 
 # User
@@ -23,10 +23,10 @@ This returns a Discord OAuth2 URL with which the user may use to authenticate.
 The Guild object represents the guild specified by its `id` in the querystring as it appears in our system.
 ## Configure
 #### POST /guild/configure
-| Left-aligned | Center-aligned | Right-aligned |
-| :---         |     :---:      |          ---: |
-| git status   | git status     | git status    |
-| git diff     | git diff       | git diff      |
+|    Field     | Description    | Required      | Default       |
+| :---         | :---           |     :---:     |     :---:     |
+| git status   | git status     | git status    | null          |
+| git diff     | git diff       | git diff      |               |
 ## Users
 #### GET /guild/users
 
