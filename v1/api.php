@@ -405,8 +405,8 @@ class APIhost extends Security
                         }
                         else
                         {
-                            //no valid access_roles passed, ignore
-                            unset($settings->$name);
+                            //no valid access_roles passed, set to false
+                            $settings->$name = false;
                         }
                     }                    
                 }
