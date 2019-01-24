@@ -373,7 +373,8 @@ class APIhost extends Security
                 
                 if ($name == "channels")
                 {
-                    foreach ((array)$value as $i => $channel)
+                    $settings->$name = (array)$value;
+                    foreach ($settings->$name as $i => $channel)
                     {
                         if (!in_array($channel, array_column($this->discord->bot->guilds->$guildID->channels, 'id')))
                         {
@@ -385,21 +386,15 @@ class APIhost extends Security
                 }
                 elseif ($name == "access_roles")
                 {
+                    $settings->$name = (array)$value;
                     $settings->$name = filter_var($settings->$name, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $settings->$name;
                     if ($settings->$name !== false)
                     {
-                        foreach ((array)$value as $i => $role)
+                        foreach ($settings->$name as $i => $role)
                         {
                             if (!in_array($role, array_column($this->discord->bot->guilds->$guildID->info->roles, 'id')))
                             {
-                                if (is_array($settings->$name))
-                                {
-                                    unset($settings->$name[$i]);
-                                }
-                                else
-                                {
-                                    unset($settings->$name);                                    
-                                }
+                                unset($settings->$name[$i]);
                             }
                         }
 
