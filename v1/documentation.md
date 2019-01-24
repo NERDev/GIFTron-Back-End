@@ -26,7 +26,6 @@ The Guild object represents the guild specified by its `id` in the querystring a
 |    Field     | Description    | Required      | Default       |
 | :---         | :---           | :---          | :---          |
 | guild_id*    | the id         | true          | null          |
-| git diff     | git diff       | git diff      | null          |
 ## Users
 #### GET /guild/users
 
