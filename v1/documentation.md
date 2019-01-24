@@ -11,7 +11,7 @@ The User object represents the currently-logged-in user as it appears in our sys
 
 ## Guilds
 #### GET /user/guilds
-This returns a list of guilds that relate to both the user, and to our system. Similar in usage to Discord's [Get Current User Guilds](https://discordapp.com/developers/docs/resources/user#get-current-user-guilds "Discord Documentation") endpoint.
+This returns a list of Guilds that relate to both the user, and to our system. Similar in usage to Discord's [Get Current User Guilds](https://discordapp.com/developers/docs/resources/user#get-current-user-guilds "Discord Documentation") endpoint.
 
 ## Auth
 #### GET /user/auth
@@ -20,13 +20,21 @@ This returns a Discord OAuth2 URL with which the user may use to authenticate.
 
 # Guild
 #### GET /guild
-The Guild object represents the guild specified by its `id` in the querystring as it appears in our system.
+The Guild object represents the Guild specified by its `id` in the querystring as it appears in our system.
 ## Configure
 #### POST /guild/configure
 
-| Field        | Description          | Required      | Default       |
-| ---          | ---                  | ---           | ---           |
-| guild_id*    | the id of the guild  | true          | null          |
+Updates the Guild configuration according to the parameters given.
+
+| Field        | Description                                         | Required      | Default       |
+| ---          | ---                                                 | ---           | ---           |
+| guild_id*    | Discord Guild id                                    | true          |               |
+| channels     | Giveaway channels                                   | false         | inherited     |
+| access_roles | Access roles                                        | false         | inherited     |
+| strict       | Restrict access to only access role members         | false         | inherited     |
+
+
+
 ## Users
 #### GET /guild/users
 
