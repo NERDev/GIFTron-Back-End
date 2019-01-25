@@ -19,7 +19,6 @@ $apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd()))
 trait RequiredGiveawayParams
 {
     public $guild_id;
-    public $start;
     public $end;
     public $name;
     public $channel;
@@ -29,6 +28,7 @@ class Giveaway
 {
     use RequiredGiveawayParams;
 
+    public $start;
     public $visible;
     public $recurring;
     public $key;
@@ -487,8 +487,7 @@ class APIhost extends Security
             }
             
             $id = md5(uniqid(random_int(0,999), TRUE));
-
-
+            
             if ($giveaway->key)
             {
                 //GIFTron's got a key to give away - proceed
@@ -497,10 +496,15 @@ class APIhost extends Security
                     $this->respond(400, "You can't schedule a Giveaway for a channel that's not setup for it.");
                 }
 
-                $guild->giveaways[] = $id;
-                var_dump($this->storage->write("giveaways/$id", $giveaway));
+                if (!in_array($id, $guild->giveaways))
+                {
+                    $guild->giveaways[] = $id;
+                }
+
+                $this->storage->write("giveaways/$id", $giveaway);
                 $this->storage->write("guilds/$guildID", $guild);
-                $this->respond(200, [$id => $giveaway]);
+                $giveaway->id = $id;
+                $this->respond(200, $giveaway);
             }
 
             if (!$giveaway->key && !$giveaway->game_id)
@@ -512,9 +516,6 @@ class APIhost extends Security
             {
                 //GIFTron needs to buy this game
             }
-
-
-            $this->respond(200, $giveaway);
         }
 
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
