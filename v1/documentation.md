@@ -38,6 +38,8 @@ Updates the Guild configuration according to the parameters given.
 | channels     | Discord Channel(s) to use for Giveaways                 | false         | inherited     |
 | access_roles | Discord Role(s) to use for allowing access to GIFTron   | false         | inherited     |
 | strict       | Restrict access to only Access Role members             | false         | inherited     |
+| max          | Maximum price for automatically-chosen games            | false         | inherited     |
+| min          | Minimum price for automatically-chosen games            | false         | inherited     |
 
 Note: only the fields specified will be affected. If a field is omitted, it will not be changed from its current state.
 
