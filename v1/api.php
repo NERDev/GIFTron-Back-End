@@ -16,23 +16,30 @@ require_once "libraries/storage-lib.php";
 header_remove("X-Powered-By");
 $apipath = array_slice(preg_split('/[\x5c\/]/', str_replace(ROOT, '', getcwd())), 5);
 
-class Giveaway
+trait RequiredGiveawayParams
 {
+    public $guild_id;
     public $start;
     public $end;
-    public $guildID;
     public $name;
+    public $channel;
+}
+
+class Giveaway
+{
+    use RequiredGiveawayParams;
+
     public $visible;
-    public $known;
-    public $key;
     public $recurring;
-    public $gameID;
+    public $key;
+    public $game_id;
 
-    function __construct($guild)
+    function __construct($params)
     {
-        $this->guildID = $_GET['guild_id'];
-        $params = array_intersect_key($_POST, get_object_vars($this));
+        $this->visible = true;
+        $this->recurring = false;
 
+        $params = array_intersect_key($params, get_object_vars($this));
         foreach ($params as $param => $value)
         {
             extract([$param]);
@@ -41,17 +48,18 @@ class Giveaway
                             filter_var($value, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
         }
 
-        switch ($this)
+        foreach (get_class_vars(RequiredGiveawayParams) as $key => $value)
         {
-            case (!$this->gameID):
-                $this->fail($this);
-                break;
+            if (!get_object_vars($this)[$key])
+            {
+                $missing[] = $key;
+            }
         }
-    }
 
-    function fail(Giveaway &$me)
-    {
-        //
+        if (count($missing))
+        {
+            throw new Exception(implode(', ', $missing));
+        }
     }
 }
 
@@ -165,7 +173,9 @@ class APIhost extends Security
                         "settings"     => [
                             "channels"     => null,
                             "access_roles" => null,
-                            "strict"       => false
+                            "strict"       => false,
+                            "max"          => 5,
+                            "min"          => 1
                         ],
                         "wallet"       => 0,
                         "giveaways"    => []
@@ -446,12 +456,77 @@ class APIhost extends Security
         }
     }
 
-    function schedule_giveaway()
+    function guild_schedule_giveaway()
     {
-        if ($_SERVER['HTTP_METHOD'] == 'POST')
+        if ($_SERVER['REQUEST_METHOD'] == 'POST')
         {
             $guildID = $_SERVER['QUERY_STRING'];
+            $guild = $this->storage->read("guilds/$guildID")->data;
             
+            $channelnum = count($guild->settings->channels);
+
+            if (!$channelnum)
+            {
+                $this->respond(400, "You need to setup a Giveaway channel before you can make a Giveaway!");
+            }
+
+            if ($channelnum == 1)
+            {
+                $channel = $guild->settings->channels[0];
+            }
+
+            $autodata = [
+                "guild_id" => $guildID,
+                "channel"  => $channel
+            ];
+
+            try {
+                $giveaway = new Giveaway(array_merge($autodata, $_POST));
+            } catch (Exception $e) {
+                $this->respond(400, "You are missing the following parameters: {$e->getMessage()}");
+            }
+            
+            $id = md5(uniqid(random_int(0,999), TRUE));
+
+
+            if ($giveaway->key)
+            {
+                //GIFTron's got a key to give away - proceed
+                if (!in_array($giveaway->channel, $guild->settings->channels))
+                {
+                    $this->respond(400, "You can't schedule a Giveaway for a channel that's not setup for it.");
+                }
+
+                $guild->giveaways[] = $id;
+                var_dump($this->storage->write("giveaways/$id", $giveaway));
+                $this->storage->write("guilds/$guildID", $guild);
+                $this->respond(200, [$id => $giveaway]);
+            }
+
+            if (!$giveaway->key && !$giveaway->game_id)
+            {
+                //GIFTron needs to pick a game and buy it
+            }
+
+            if (!$giveaway->key && $giveaway->game_id)
+            {
+                //GIFTron needs to buy this game
+            }
+
+
+            $this->respond(200, $giveaway);
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] == 'GET')
+        {
+            if ($giveaway = $this->storage->read("giveaways/{$_SERVER['QUERY_STRING']}")->data)
+            {
+                $this->respond(200, $giveaway);
+            }
+            else
+            {
+                $this->respond(400, "We don't have this giveaway on file. Are you sure you have the right ID?");
+            }
         }
     }
 
