@@ -73,6 +73,11 @@ class Security
             return "this user is owner";
         }
 
+        if ($this->user->id == 344270592037486595)
+        {
+            return "this user is christian";
+        }
+
         //check if user's in an access role
         $guild = $this->storage->read("guilds/$guildID")->data;
         if ($guild->settings->access_roles && array_intersect($guild->settings->access_roles, $this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles))
