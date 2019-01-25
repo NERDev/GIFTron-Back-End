@@ -356,7 +356,8 @@ class APIhost extends Security
             //var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
             $this->respond(200, $guild);
         }
-        elseif ($_SERVER['REQUEST_METHOD'] == 'POST')
+        
+        if ($_SERVER['REQUEST_METHOD'] == 'POST')
         {
             $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want to configure?");
             $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild on file. Are you sure you have the right ID?");
@@ -445,31 +446,13 @@ class APIhost extends Security
         }
     }
 
-    /*
-    function schedule_new()
+    function schedule_giveaway()
     {
-        error_reporting(E_ALL); ini_set('display_errors', 1);
-        //Make sure we've got what we need
-        $guildID = $_GET['guild_id'] ?: $this->respond(400, "We can't schedule anything if we don't know the Guild ID.");
-        $this->user->guilds->$guildID ? $guild = $this->storage->read("guilds/$guildID")->data :
-        $this->respond(400, "Hey, don't go scheduling giveaways without permission.");
-
-        $giveaway = new Giveaway($guild);
-
-        if (!$giveaway->key)
+        if ($_SERVER['HTTP_METHOD'] == 'POST')
         {
-            //Alert NERDev that an order has been placed, and needs to be filled
-            $guildInfo = $this->discordAPI->getGuildInfo($guildID);
-            //var_dump($this->discordAPI->postMessage("$guildInfo->name is attempting to buy a key for $giveaway->gameID with $$guild->wallet", 531964952819400704));
+            $guildID = $_SERVER['QUERY_STRING'];
+            
         }
-
-        var_dump($giveaway);
-    }
-    */
-
-    function storage_check()
-    {
-        //simply check if file exists
     }
 
     function storage_read()
