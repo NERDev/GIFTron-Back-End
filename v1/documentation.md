@@ -91,6 +91,9 @@ Giveaways may be configured as either one-time or recurring; i.e. every time at 
 # Order
 ## Fill
 
+# Event
+An Event is a way to trigger a Giveaway, without knowing when it takes place.
+
 # Shard
 
 # Settings
