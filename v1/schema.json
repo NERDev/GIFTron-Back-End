@@ -3,44 +3,28 @@
         "auth": {
             "methods": ["GET"]
         },
-        "info": {
-            "methods": ["GET"]
-        },
         "guilds": {
             "methods": ["GET"]
-        }
+        },
+        "methods": ["GET"]
     },
     "guild": {
-        "info": {
-            "methods": ["GET"]
-        },
-        "configure": {
-            "methods": ["POST", "GET"]
-        },
         "users": {
             "methods": ["GET"]
         },
         "schedule": {
-            "add": {
-                "giveaway": {
-                    "methods": ["POST", "GET"]
-                }
+            "giveaway": {
+                "methods": ["POST", "GET"]
             },
-            "check": {
-                "giveaway": {
-                    "methods": ["GET"]
-                },
-                "methods": ["GET"]
-            }
+            "methods": ["GET"]
         },
         "wallet": {
             "methods": ["GET", "PUT"]
-        }
+        },
+        "methods": ["GET", "POST"]
     },
     "order": {
-        "fill": {
-            "methods": ["GET", "PUT"]
-        }
+        "methods": ["GET", "PUT"]
     },
     "storage": {
         "protected": true,
