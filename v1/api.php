@@ -8,9 +8,11 @@ define('VERSION', preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4])
 */
 
 define('SERVER_WELCOME', '533005932079218689');
+define('SERVER_ORDERS', '538825512567439380');
 
 require_once "libraries/security-lib.php";
 require_once "libraries/discord-lib2.php";
+require_once "libraries/g2a-lib.php";
 require_once "libraries/storage-lib.php";
 
 header_remove("X-Powered-By");
@@ -90,6 +92,8 @@ class APIhost extends Security
         }
         
         $this->storage = new StorageNode;
+        //Don't freak out, these credentials are public on G2A's documentation.
+        $this->g2a = new \G2A\API("qdaiciDiyMaTjxMt", "74026b3dc2c6db6a30a73e71cdb138b1e1b5eb7a97ced46689e2d28db1050875");
         
         if ($this->session = $this->parse_session($_COOKIE['session']))
         {
@@ -221,7 +225,7 @@ class APIhost extends Security
 
     function user()
     {
-        $this->respond(200, $this->user);
+        $this->user ? $this->respond(200, $this->user) : $this->respond(401, "Please log in.");
     }
 
     function user_guilds()
@@ -493,13 +497,14 @@ class APIhost extends Security
             
             $id = md5(uniqid(random_int(0,999), TRUE));
             
+            if (!in_array($giveaway->channel, $guild->settings->channels))
+            {
+                $this->respond(400, "You can't schedule a Giveaway for a channel that's not setup for it.");
+            }
+            
             if ($giveaway->key)
             {
                 //GIFTron's got a key to give away - proceed
-                if (!in_array($giveaway->channel, $guild->settings->channels))
-                {
-                    $this->respond(400, "You can't schedule a Giveaway for a channel that's not setup for it.");
-                }
 
                 if (!in_array($id, $guild->giveaways))
                 {
@@ -515,7 +520,21 @@ class APIhost extends Security
             if ($giveaway->game_id)
             {
                 //GIFTron needs to buy this game
-                var_dump("GIFTron will buy $giveaway->game_id");
+
+                if (!$guild->wallet)
+                {
+                    //$this->respond(400, "You don't have any money!");
+                }
+
+                $gameInfo = $this->g2a->games->{$giveaway->game_id}->info->docs[0];
+                $gameSlug = "https://www.g2a.com$gameInfo->slug";
+
+                $this->storage->write("orders/$id", $giveaway);
+
+                var_dump($this->discord->bot->channels->{SERVER_ORDERS}->postMessage(
+                    "<@".$this->user->id."> from {$this->discord->bot->guilds->$guildID->info->name} placed order number $id for $gameSlug with \$$guild->wallet"
+                ));
+                $this->respond(200, $giveaway);
             }
         }
 
@@ -545,6 +564,13 @@ class APIhost extends Security
         $storage = new StorageNode;
         $this->respond(200, $storage->write($_SERVER['QUERY_STRING'], json_decode(file_get_contents("php://input"), true)));
     }
+}
+
+function test()
+{
+    //define('FSROOT', realpath("../../../../webroot/giftron/api"));
+    //var_dump(FSROOT . "/index.html", realpath("./documentation.md"));
+    symlink('L:\Documents\GitHub\NERDev\git\GIFTron\GIFTron-Back-End\documentation.html', 'L:\Documents\GitHub\NERDev\webroot\giftron\api\index.html');
 }
 
 function build()
