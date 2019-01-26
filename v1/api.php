@@ -48,6 +48,11 @@ class Giveaway
                             filter_var($value, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
         }
 
+        if (!$this->key && !$this->game_id)
+        {
+            $missing[] = implode(' or ', $items);
+        }
+
         foreach (get_class_vars(RequiredGiveawayParams) as $key => $value)
         {
             if (!get_object_vars($this)[$key])
@@ -507,14 +512,10 @@ class APIhost extends Security
                 $this->respond(200, $giveaway);
             }
 
-            if (!$giveaway->key && !$giveaway->game_id)
-            {
-                //GIFTron needs to pick a game and buy it
-            }
-
-            if (!$giveaway->key && $giveaway->game_id)
+            if ($giveaway->game_id)
             {
                 //GIFTron needs to buy this game
+                var_dump("GIFTron will buy $giveaway->game_id");
             }
         }
 
