@@ -532,7 +532,7 @@ class APIhost extends Security
                 $this->storage->write("orders/$id", $giveaway);
 
                 var_dump($this->discord->bot->channels->{SERVER_ORDERS}->postMessage(
-                    "<@".$this->user->id."> from {$this->discord->bot->guilds->$guildID->info->name} placed order number $id for $gameSlug with \$$guild->wallet"
+                    "<@".$this->user->id."> from {$this->discord->bot->guilds->$guildID->info->name} placed order number `$id` for $gameSlug with \$$guild->wallet"
                 ));
                 $this->respond(200, $giveaway);
             }
@@ -619,7 +619,6 @@ else
     {
         $methodproperties = $methodproperties->$property;
     }
-
 
     //Check before instantiating APIhost
     if (!$security->require_methods($methodproperties->methods))
