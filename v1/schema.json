@@ -24,9 +24,6 @@
         "methods": ["GET", "POST"]
     },
     "order": {
-        "fill": {
-            "methods": ["GET"]
-        },
         "methods": ["GET", "PUT"]
     },
     "storage": {
