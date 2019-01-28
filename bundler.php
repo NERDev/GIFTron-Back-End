@@ -287,6 +287,9 @@ function minify($stream)
     return $stream;
 }
 
+//regex for stripping everything in single quotes: (')(?:(?=(\\?))\2.)*?\1
+//regex for pulling everything that might be a javascript object reference (?:(?! )(?=[a-zA-Z0-9\.]).)+
+
 $path = realpath("../../git/GIFTron/GIFTron-Front-End");
 
 $dom = new DOMDocument;
