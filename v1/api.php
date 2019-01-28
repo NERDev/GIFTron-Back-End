@@ -553,6 +553,22 @@ class APIhost extends Security
         }
     }
 
+    function order_fill()
+    {
+        $order = $_SERVER['QUERY_STRING'] ?? $this->respond(400, "We need an order to fill.");
+
+        if ($_SERVER['HTTP_METHOD'] == 'PUT')
+        {
+            $_PUT = (array)json_decode(file_get_contents("php://input"));
+            $price = $_PUT['price'] ?? $this->respond(400, "We need to know how much this cost.");
+            $key = $_PUT['key'] ?? $this->respond(400, "We need to know what the key is for this game.");
+
+            $giveaway = $this->storage->read("orders/$order")->data;
+            $guild = $this->storage->read("guilds/$giveaway->guild_id");
+            $giveaway->key = $key;
+        }
+    }
+
     function storage_read()
     {
         $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
