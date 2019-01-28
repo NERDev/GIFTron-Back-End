@@ -133,7 +133,8 @@ class APIhost extends Security
             {
                 unset($parts['permissions']);
             }
-            $this->respond(200, \DiscordLib\HTTP::$baseURL . "/oauth2/authorize?" . http_build_query($parts));
+
+            $this->redirect(\DiscordLib\HTTP::$baseURL . "/oauth2/authorize?" . http_build_query($parts));
         }
 
         isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
@@ -218,9 +219,10 @@ class APIhost extends Security
 
 
         //Check if User has been updated with new information
-        var_dump($this->user);
+        //var_dump($this->user);
         $this->storage->write("users/" . $this->user->id, $this->user);
-        var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.");
+        //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.");
+        $this->redirect("/giftron");
     }
 
     function user()
