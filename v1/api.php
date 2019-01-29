@@ -571,34 +571,35 @@ class APIhost extends Security
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
         {
-            if ($order->status == 'filled')
+            if ($order->status != 'pending')
             {
-                $this->respond(200, "Order has already been filled.");
+                $this->respond(200, "Order has already been $order->status.");
             }
-
             
             $price = $_POST['price'] ?: $this->respond(400, "We need to know how much this cost.");
             $key = $_POST['key'] ?: $this->respond(400, "We need to know what the key is for this game.");
 
             $guild = $this->storage->read("guilds/{$order->giveaway->guild_id}");
             
+            $giveaway = $order->giveaway;
+            unset($order->giveaway);
+
             if (!($guild->wallet - $price >= 0))
             {
-                //$this->respond(400, "Insufficient funds... \$$guild->wallet - \$$price is negative.");
+                $order->status = "declined";
+            }
+            else
+            {
+                $order->status = "filled";
+                $order->price = $price;
+                $giveaway->key = $key;
+                $guild->wallet -= $price;
+                $guild->giveaways[] = $orderID;
+                $this->storage->write("giveaways/$orderID", $giveaway);
             }
 
-            $order->giveaway->key = $key;
-            unset($order->giveaway->game_id);
-            $guild->wallet -= $price;
-
-            $guild->giveaways[] = $orderID;
-
-            $this->storage->write("giveaways/$orderID", $order->giveaway);
-            $order->status = "filled";
-            $order->price = $price;
-            unset($order->giveaway);
             $this->storage->write("orders/$orderID", $order);
-            $this->discord->bot->channels->{SERVER_ORDERS}->postMessage("Order `$orderID` has been filled.");
+            $this->discord->bot->channels->{SERVER_ORDERS}->postMessage("Order `$orderID` has been $order->status.");
             $this->respond(200, $order);
         }
 
