@@ -559,17 +559,17 @@ class APIhost extends Security
         }
     }
 
-    function order_fill()
+    function order()
     {
-        $orderID = $_SERVER['QUERY_STRING'] ?? $this->respond(400, "We need an order to fill.");
+        $orderID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "We need an order ID.");
+        $order = $this->storage->read("orders/$orderID")->data ?: $this->respond(400, "We don't have an order by this ID.");
 
         if ($_SERVER['HTTP_METHOD'] == 'PUT')
         {
             $_PUT = (array)json_decode(file_get_contents("php://input"));
-            $price = $_PUT['price'] ?? $this->respond(400, "We need to know how much this cost.");
-            $key = $_PUT['key'] ?? $this->respond(400, "We need to know what the key is for this game.");
+            $price = $_PUT['price'] ?: $this->respond(400, "We need to know how much this cost.");
+            $key = $_PUT['key'] ?: $this->respond(400, "We need to know what the key is for this game.");
 
-            $order = $this->storage->read("orders/$orderID")->data;
             $guild = $this->storage->read("guilds/{$order->giveaway->guild_id}");
             
             if (!($guild->wallet - $price >= 0))
@@ -588,6 +588,11 @@ class APIhost extends Security
                 unset($order->giveaway);
             }
             $this->storage->write("orders/$orderID", $order);
+        }
+
+        if ($_SERVER['HTTP_METHOD'] == 'GET')
+        {
+            $this->respond(200, $order);
         }
     }
 
