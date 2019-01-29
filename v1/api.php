@@ -581,12 +581,9 @@ class APIhost extends Security
             unset($order->giveaway->game_id);
             $guild->wallet -= $price;
 
-            if ($debug = $this->storage->write("giveaways/$orderID", $order->giveaway))
-            {
-                //Giveaway was written - clean up the order
-                $order->status = "filled";
-                unset($order->giveaway);
-            }
+            $this->storage->write("giveaways/$orderID", $order->giveaway);
+            $order->status = "filled";
+            unset($order->giveaway);
             $this->storage->write("orders/$orderID", $order);
         }
 
