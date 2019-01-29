@@ -50,9 +50,10 @@ class Giveaway
                             filter_var($value, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
         }
 
+
         if (!$this->key && !$this->game_id)
         {
-            $missing[] = implode(' or ', $items);
+            $missing[] = implode("key or game ID");
         }
 
         foreach (get_class_vars(RequiredGiveawayParams) as $key => $value)
@@ -462,7 +463,7 @@ class APIhost extends Security
                     "Hey, <@".$this->user->id."> just locked everyone but you out of {$this->discord->bot->guilds->$guildID->info->name}'s GIFTron Dashboard. Thought you should know."
                 );
             }
-            var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
+            //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
             $this->respond(200, $guild);
         }
     }
@@ -528,7 +529,11 @@ class APIhost extends Security
                     //$this->respond(400, "You don't have any money!");
                 }
 
-                $gameInfo = $this->g2a->games->{$giveaway->game_id}->info->docs[0];
+                if (!$gameInfo = $this->g2a->games->{$giveaway->game_id}->info->docs[0])
+                {
+                    $this->respond(400, "Invalid game");
+                }
+
                 $gameSlug = "https://www.g2a.com$gameInfo->slug";
 
                 $order = [
@@ -564,11 +569,16 @@ class APIhost extends Security
         $orderID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "We need an order ID.");
         $order = $this->storage->read("orders/$orderID")->data ?: $this->respond(400, "We don't have an order by this ID.");
 
-        if ($_SERVER['HTTP_METHOD'] == 'PUT')
+        if ($_SERVER['REQUEST_METHOD'] == 'POST')
         {
-            $_PUT = (array)json_decode(file_get_contents("php://input"));
-            $price = $_PUT['price'] ?: $this->respond(400, "We need to know how much this cost.");
-            $key = $_PUT['key'] ?: $this->respond(400, "We need to know what the key is for this game.");
+            if ($order->status == 'filled')
+            {
+                $this->respond(200, "Order has already been filled.");
+            }
+
+            
+            $price = $_POST['price'] ?: $this->respond(400, "We need to know how much this cost.");
+            $key = $_POST['key'] ?: $this->respond(400, "We need to know what the key is for this game.");
 
             $guild = $this->storage->read("guilds/{$order->giveaway->guild_id}");
             
@@ -581,13 +591,18 @@ class APIhost extends Security
             unset($order->giveaway->game_id);
             $guild->wallet -= $price;
 
+            $guild->giveaways[] = $orderID;
+
             $this->storage->write("giveaways/$orderID", $order->giveaway);
             $order->status = "filled";
+            $order->price = $price;
             unset($order->giveaway);
             $this->storage->write("orders/$orderID", $order);
+            $this->discord->bot->channels->{SERVER_ORDERS}->postMessage("Order `$orderID` has been filled.");
+            $this->respond(200, $order);
         }
 
-        if ($_SERVER['HTTP_METHOD'] == 'GET')
+        if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
             $this->respond(200, $order);
         }

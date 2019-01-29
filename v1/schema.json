@@ -24,7 +24,7 @@
         "methods": ["GET", "POST"]
     },
     "order": {
-        "methods": ["GET", "PUT"]
+        "methods": ["GET", "POST"]
     },
     "storage": {
         "protected": true,
