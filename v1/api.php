@@ -531,12 +531,18 @@ class APIhost extends Security
                 $gameInfo = $this->g2a->games->{$giveaway->game_id}->info->docs[0];
                 $gameSlug = "https://www.g2a.com$gameInfo->slug";
 
-                $this->storage->write("orders/$id", $giveaway);
+                $order = [
+                    "status"    => "pending",
+                    "giveaway"  => $giveaway
+                ];
 
-                var_dump($this->discord->bot->channels->{SERVER_ORDERS}->postMessage(
+                $this->storage->write("orders/$id", $order);
+
+                $this->discord->bot->channels->{SERVER_ORDERS}->postMessage(
                     "<@".$this->user->id."> from {$this->discord->bot->guilds->$guildID->info->name} placed order number `$id` for $gameSlug with \$$guild->wallet"
-                ));
-                $this->respond(200, $giveaway);
+                );
+                $order->id = $id;
+                $this->respond(200, $order);
             }
         }
 
@@ -555,7 +561,7 @@ class APIhost extends Security
 
     function order_fill()
     {
-        $order = $_SERVER['QUERY_STRING'] ?? $this->respond(400, "We need an order to fill.");
+        $orderID = $_SERVER['QUERY_STRING'] ?? $this->respond(400, "We need an order to fill.");
 
         if ($_SERVER['HTTP_METHOD'] == 'PUT')
         {
@@ -563,9 +569,25 @@ class APIhost extends Security
             $price = $_PUT['price'] ?? $this->respond(400, "We need to know how much this cost.");
             $key = $_PUT['key'] ?? $this->respond(400, "We need to know what the key is for this game.");
 
-            $giveaway = $this->storage->read("orders/$order")->data;
-            $guild = $this->storage->read("guilds/$giveaway->guild_id");
-            $giveaway->key = $key;
+            $order = $this->storage->read("orders/$orderID")->data;
+            $guild = $this->storage->read("guilds/{$order->giveaway->guild_id}");
+            
+            if (!($guild->wallet - $price >= 0))
+            {
+                //$this->respond(400, "Insufficient funds... \$$guild->wallet - \$$price is negative.");
+            }
+
+            $order->giveaway->key = $key;
+            unset($order->giveaway->game_id);
+            $guild->wallet -= $price;
+
+            if ($debug = $this->storage->write("giveaways/$orderID", $order->giveaway))
+            {
+                //Giveaway was written - clean up the order
+                $order->status = "filled";
+                unset($order->giveaway);
+            }
+            $this->storage->write("orders/$orderID", $order);
         }
     }
 
