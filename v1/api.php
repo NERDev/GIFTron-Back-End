@@ -571,16 +571,12 @@ class APIhost extends Security
 
     function storage_read()
     {
-        $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
         $this->respond(200, $this->storage->read($_SERVER['QUERY_STRING']));
     }
 
     function storage_write()
     {
-        //refactor to user $this->storage as above
-        $this->trusted_server($_SERVER['REMOTE_ADDR']) ?: $this->respond(400, "Untrusted Origin");
-        $storage = new StorageNode;
-        $this->respond(200, $storage->write($_SERVER['QUERY_STRING'], json_decode(file_get_contents("php://input"), true)));
+        $this->respond(200, $this->storage->write($_SERVER['QUERY_STRING'], json_decode(file_get_contents("php://input"), true)));
     }
 }
 
