@@ -310,7 +310,7 @@ foreach ($scripts as $script)
     if (!filter_var($attr, FILTER_VALIDATE_URL))
     {
         $script->removeAttribute('src');
-        $script->textContent = minify(file_get_contents("$path/$attr"));
+        $script->textContent = file_get_contents("$path/$attr");
     }
 }
-echo TinyMinify::html($dom->saveHTML());
+echo $dom->saveHTML();
