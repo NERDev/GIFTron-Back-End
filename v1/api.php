@@ -435,7 +435,7 @@ class APIhost extends Security
                 }
                 elseif ($name == "strict")
                 {
-                    if (!is_bool($settings->$name))
+                    if (!is_bool($settings->$name) || ($this->discord->bot->guilds->$guildID->info->owner_id != $this->user->id))
                     {
                         //isn't a boolean, so disregard
                         unset($settings->$name);
@@ -450,6 +450,10 @@ class APIhost extends Security
             $guild->settings = $newsettings;
             $this->storage->write("guilds/$guildID", $guild);
 
+            
+            /*
+            
+            Numbskull protocol
 
             if ($danger_will_robinson && !$guild->settings->access_roles && $guild->settings['strict'] && $this->user->id != $this->discord->bot->guilds->$guildID->info->owner_id)
             {
@@ -463,6 +467,7 @@ class APIhost extends Security
                     "Hey, <@".$this->user->id."> just locked everyone but you out of {$this->discord->bot->guilds->$guildID->info->name}'s GIFTron Dashboard. Thought you should know."
                 );
             }
+            */
             //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
             $this->respond(200, $guild);
         }
