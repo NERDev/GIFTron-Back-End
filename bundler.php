@@ -299,9 +299,9 @@ $styles = $dom->getElementsByTagName('style');
 
 foreach ($styles as $style)
 {
-    $attr = $script->getAttribute('src');
-    $script->removeAttribute('src');
-    $script->textContent = minify(file_get_contents("$path/$attr"));
+    $attr = $style->getAttribute('src');
+    $style->removeAttribute('src');
+    $style->textContent = minify(file_get_contents("$path/$attr"));
 }
 
 foreach ($scripts as $script)
