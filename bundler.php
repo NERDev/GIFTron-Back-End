@@ -297,6 +297,13 @@ $dom->loadHTML(file_get_contents("$path/app.html"));
 $scripts = $dom->getElementsByTagName('script');
 $styles = $dom->getElementsByTagName('style');
 
+foreach ($styles as $style)
+{
+    $attr = $script->getAttribute('src');
+    $script->removeAttribute('src');
+    $script->textContent = minify(file_get_contents("$path/$attr"));
+}
+
 foreach ($scripts as $script)
 {
     $attr = $script->getAttribute('src');
