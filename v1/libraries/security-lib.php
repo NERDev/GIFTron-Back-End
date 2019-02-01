@@ -63,6 +63,12 @@ class Security
     {
         
     }
+
+    function is_staff($user_id = null)
+    {
+        $user_id = $user_id ?: $this->user->id;
+        return in_array(NERDEV_EMPLOYEE, $this->discord->bot->guilds->{NERDEV}->members->$user_id->info->roles);
+    }
     
     function permitted($guildID)
     {

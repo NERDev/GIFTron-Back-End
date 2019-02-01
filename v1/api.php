@@ -9,6 +9,8 @@ define('VERSION', preg_split('/[\\x5c\/]/', str_replace(ROOT, '', __FILE__))[4])
 
 define('SERVER_WELCOME', '533005932079218689');
 define('SERVER_ORDERS', '538825512567439380');
+define('NERDEV', '521130623750897694');
+define('NERDEV_EMPLOYEE', '540647711947358222');
 
 require_once "libraries/security-lib.php";
 require_once "libraries/discord-lib2.php";
@@ -267,114 +269,122 @@ class APIhost extends Security
             $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want information for?");
             $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
 
-            if (!$guild->settings->channels)
+            if (!$this->is_staff() || !$this->permitted($guildID))
             {
-                $match = 'giveaway';
-                $channels = $this->discord->bot->guilds->$guildID->channels;
-
-                if ($channels)
+                unset($guild->settings);
+                unset($guild->wallet);
+            }
+            else
+            {
+                if (!$guild->settings->channels)
                 {
-                    //Build tree of channels
-
-                    foreach ($channels as $i => $channel)
+                    $match = 'giveaway';
+                    $channels = $this->discord->bot->guilds->$guildID->channels;
+    
+                    if ($channels)
                     {
-                        if ($channel->type == 4)
+                        //Build tree of channels
+    
+                        foreach ($channels as $i => $channel)
                         {
-                            $categories[$channel->id];
-                        }
-
-                        if ($channel->type == 0)
-                        {
-                            $availableChannels[$channel->id] = $channel->name;
-                            $categories[$channel->parent_id ?? $channel->guild_id][] = $channel;
-                        }
-                    }
-
-                    //Obtain list of suggested channels
-
-                    foreach ($channels as $channel)
-                    {
-                        if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $channel->name)), $match))
-                        {
-                            if ($channel->type == 0)
-                            {
-                                $suggestedChannels[$channel->id] = $channel->name;
-                            }
-
                             if ($channel->type == 4)
                             {
-                                foreach ($categories[$channel->id] as $child)
+                                $categories[$channel->id];
+                            }
+    
+                            if ($channel->type == 0)
+                            {
+                                $availableChannels[$channel->id] = $channel->name;
+                                $categories[$channel->parent_id ?? $channel->guild_id][] = $channel;
+                            }
+                        }
+    
+                        //Obtain list of suggested channels
+    
+                        foreach ($channels as $channel)
+                        {
+                            if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $channel->name)), $match))
+                            {
+                                if ($channel->type == 0)
                                 {
-                                    if ($child->type == 0)
+                                    $suggestedChannels[$channel->id] = $channel->name;
+                                }
+    
+                                if ($channel->type == 4)
+                                {
+                                    foreach ($categories[$channel->id] as $child)
                                     {
-                                        $suggestedChannels[$child->id] = $child->name;
+                                        if ($child->type == 0)
+                                        {
+                                            $suggestedChannels[$child->id] = $child->name;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-
-                    $guild->setup[] = [
-                        "channels" => [
-                            "suggested" => $suggestedChannels,
-                            "available" => array_diff($availableChannels, (array)$suggestedChannels)
-                        ]
-                    ];
-                }
-                else
-                {
-                    if (!$this->discord->bot->guilds->$guildID->info)
-                    {
-                        $guild->setup = [
-                            "guild" => [
-                                "add"
+    
+                        $guild->setup[] = [
+                            "channels" => [
+                                "suggested" => $suggestedChannels,
+                                "available" => array_diff($availableChannels, (array)$suggestedChannels)
                             ]
                         ];
                     }
-                }
-            }
-
-            if ($guild->settings->access_roles === null)
-            {
-                $matches = ["admin", "owner"];
-                $roles = $this->discord->bot->guilds->$guildID->info->roles;
-
-                if ($roles)
-                {
-                    //Obtain list of suggested channels
-                    foreach ($roles as $role)
+                    else
                     {
-                        $availableRoles[$role->id] = $role->name;
-
-                        foreach ($matches as $match)
+                        if (!$this->discord->bot->guilds->$guildID->info)
                         {
-                            if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $role->name)), $match))
-                            {
-                                $suggestedRoles[$role->id] = $role->name;
-                            }
+                            $guild->setup = [
+                                "guild" => [
+                                    "add"
+                                ]
+                            ];
                         }
                     }
-
-                    $guild->setup[] = [
-                        "access_roles" => [
-                            "suggested" => $suggestedRoles,
-                            "available" => array_diff($availableRoles, (array)$suggestedRoles)
-                        ]
-                    ];
                 }
-                else
+    
+                if ($guild->settings->access_roles === null)
                 {
-                    if (!$this->discord->bot->guilds->$guildID->info)
+                    $matches = ["admin", "owner"];
+                    $roles = $this->discord->bot->guilds->$guildID->info->roles;
+    
+                    if ($roles)
                     {
-                        $guild->setup = [
-                            "guild" => [
-                                "add"
+                        //Obtain list of suggested channels
+                        foreach ($roles as $role)
+                        {
+                            $availableRoles[$role->id] = $role->name;
+    
+                            foreach ($matches as $match)
+                            {
+                                if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $role->name)), $match))
+                                {
+                                    $suggestedRoles[$role->id] = $role->name;
+                                }
+                            }
+                        }
+    
+                        $guild->setup[] = [
+                            "access_roles" => [
+                                "suggested" => $suggestedRoles,
+                                "available" => array_diff($availableRoles, (array)$suggestedRoles)
                             ]
                         ];
                     }
+                    else
+                    {
+                        if (!$this->discord->bot->guilds->$guildID->info)
+                        {
+                            $guild->setup = [
+                                "guild" => [
+                                    "add"
+                                ]
+                            ];
+                        }
+                    }
                 }
             }
-            
+
             //var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
             $this->respond(200, $guild);
         }
