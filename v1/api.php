@@ -231,7 +231,7 @@ class APIhost extends Security
     function user()
     {
         $this->user ?: $this->respond(401, "Please log in.");
-        $this->user->staff = is_staff();
+        $this->user->staff = $this->is_staff();
         $this->respond(200, $this->user);
     }
 
