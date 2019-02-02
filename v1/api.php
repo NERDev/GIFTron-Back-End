@@ -151,6 +151,7 @@ class APIhost extends Security
                 (array) $localUserData,
                 (array) $this->discord->user->info
             );
+            $this->user->staff = $this->is_staff();
         }
 
         //Create session for User
@@ -230,9 +231,7 @@ class APIhost extends Security
 
     function user()
     {
-        $this->user ?: $this->respond(401, "Please log in.");
-        $this->user->staff = $this->is_staff();
-        $this->respond(200, $this->user);
+        $this->user ? $this->respond(200, $this->user) : $this->respond(401, "Please log in.");
     }
 
     function user_guilds()
