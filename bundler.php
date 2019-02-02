@@ -8,10 +8,20 @@ if (!$qs = $_SERVER['QUERY_STRING'])
 }
 else
 {
-    $type = end(explode('.', $qs));
-    if ($type == 'css')
-    {
-        header("Content-type: text/$type");
+    $ext = end(explode('.', $qs));
+    switch ($ext) {
+        case 'css':
+            $type = "text/$ext";
+            break;
+
+        case 'svg':
+            $type = "image/$ext+xml";
+            break;
+        
+        default:
+            $type = "text/html";
+            break;
     }
+    header("Content-type: $type");
     echo file_get_contents("$path/$qs");
 }
