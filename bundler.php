@@ -13,6 +13,7 @@ else
     $ext = end(explode('.', $qs));
     switch ($ext) {
         case 'css':
+        case 'js':
             $type = "text/$ext";
             break;
 
