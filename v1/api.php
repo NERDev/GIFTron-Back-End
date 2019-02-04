@@ -232,59 +232,6 @@ class APIhost extends Security
         $this->user ? $this->respond(200, $this->user) : $this->respond(401, "Please log in.");
     }
 
-    function user_guilds()
-    {
-        //Rework! Needs to have POST/GET methods, pull/compare stored icon/name, and update guild information as needed.
-        //Also, needs to be able to tell at a glance if the user should be able to manage the guild.
-
-        //Beware: this is an EXPENSIVE request!!
-
-        //This is the almighty filter... if it doesn't exist on our system, it doesn't get returned.
-
-        $this->respond(400, "This endpoint has been deprecated");
-
-        if (!$this->discord->user->guilds)
-        {
-            $this->respond(400, "Unable to load guilds... Check permissions");
-        }
-
-        foreach (array_column($this->discord->user->guilds, 'id') as $guildID)
-        {
-            if (!$this->user->guilds->$guildID)
-            {
-                $this->user->guilds->$guildID = false;
-            }
-        }
-        
-        foreach (array_keys((array)$this->user->guilds) as $guildID)
-        {
-            if (!$this->storage->read("guilds/$guildID")->data)
-            {
-                unset($this->user->guilds->$guildID);
-            }
-        }
-        
-        /*
-        foreach (array_unique(array_merge(array_map(function($g){return $g->id;},
-        $this->discord->user->guilds), $this->user->guilds)) as $guildID)
-        {
-            if ($this->storage->read("guilds/$guildID")->hash)
-            {
-                foreach ($this->discord->user->guilds as $i => $guild)
-                {
-                    if ($guild->id == $guildID)
-                    {
-                        $guilds[] = $this->discord->user->guilds[$i];
-                    }
-                }
-            }
-        }
-        */
-
-        //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.");
-        $this->respond(200, $this->user->guilds);
-    }
-
     function guild()
     {
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
