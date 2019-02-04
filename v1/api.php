@@ -172,16 +172,12 @@ class APIhost extends Security
             {
                 //Bot is verifiably added to this guild.
 
-                //Add guild to User's list, and instantiate it.
-                if (!in_array($guildID, $this->user->guilds))
-                {
-                    $this->user->guilds[] = "$guildID";
-                }
-
-                //var_dump($this->storage->read("guilds/$guildID"));
-
                 if (!$this->storage->read("guilds/$guildID"))
                 {
+                    //Add guild to User's list, and instantiate it.
+                    
+                    $this->user->guilds->$guildID = true;
+                    
                     $this->storage->write("guilds/$guildID", [
                         //"users"     => [$this->user->id],
                         "settings"     => [
@@ -192,7 +188,9 @@ class APIhost extends Security
                             "min"          => 1
                         ],
                         "wallet"       => 0,
-                        "giveaways"    => []
+                        "giveaways"    => [],
+                        "name"         => $this->discord->bot->guilds->$guildID->info->name,
+                        "icon"         => $this->discord->bot->guilds->$guildID->info->icon
                     ]);
 
                     //Alert to the welcome channel that we have a new member
@@ -236,14 +234,37 @@ class APIhost extends Security
 
     function user_guilds()
     {
+        //Rework! Needs to have POST/GET methods, pull/compare stored icon/name, and update guild information as needed.
+        //Also, needs to be able to tell at a glance if the user should be able to manage the guild.
+
         //Beware: this is an EXPENSIVE request!!
 
         //This is the almighty filter... if it doesn't exist on our system, it doesn't get returned.
+
+        $this->respond(400, "This endpoint has been deprecated");
+
         if (!$this->discord->user->guilds)
         {
             $this->respond(400, "Unable to load guilds... Check permissions");
         }
+
+        foreach (array_column($this->discord->user->guilds, 'id') as $guildID)
+        {
+            if (!$this->user->guilds->$guildID)
+            {
+                $this->user->guilds->$guildID = false;
+            }
+        }
         
+        foreach (array_keys((array)$this->user->guilds) as $guildID)
+        {
+            if (!$this->storage->read("guilds/$guildID")->data)
+            {
+                unset($this->user->guilds->$guildID);
+            }
+        }
+        
+        /*
         foreach (array_unique(array_merge(array_map(function($g){return $g->id;},
         $this->discord->user->guilds), $this->user->guilds)) as $guildID)
         {
@@ -258,8 +279,10 @@ class APIhost extends Security
                 }
             }
         }
-        //var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
-        $this->respond(200, $guilds);
+        */
+
+        //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.");
+        $this->respond(200, $this->user->guilds);
     }
 
     function guild()
@@ -267,13 +290,22 @@ class APIhost extends Security
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
             //error_reporting(E_ALL); ini_set('display_errors', 1);
-            $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want information for?");
+            $guildID = (count($_GET) == 1 ? (reset($_GET) ?: (string)key($_GET)) : $_GET['guild_id']) ?:
+            $this->respond(400, "Which guild did you want information for?");
             $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
-
-            if (!$this->is_staff() || !$this->permitted($guildID))
+            $short = $_GET['short'] === "" ? true : $_GET['short'];
+            
+            if ($short || !$staff = $this->is_staff() || !$permitted = $this->permitted($guildID))
             {
                 unset($guild->settings);
                 unset($guild->wallet);
+                $guild->setup = !(!$guild->settings->channels || $guild->settings->access_roles === null);
+                
+                if (isset($this->user->guilds->$guildID))
+                {
+                    //Guild is in the user's list. 
+                    $guild->manage = $this->user->guilds->$guildID;
+                }
             }
             else
             {
@@ -386,7 +418,23 @@ class APIhost extends Security
                 }
             }
 
-            //var_dump("We hit discord " . \DiscordLib\HTTP::$requests . " times.");
+            if (isset($permitted))
+            {
+                //This means someone who's not a staff member made a direct request to view information for a guild.
+                if (isset($this->user->guilds->$guildID) && ($this->user->guilds->$guildID != $permitted))
+                {
+                    //The value on file for the guild, in the user's list, is not what it now is. Need to update.
+                    //Note: this operation happens REGARDLESS of whether or not the user was permitted or denied. We're just changing the status.
+                    $this->user->guilds->$guildID = $permitted;
+                    $this->storage->write("users/{$this->user->id}", $this->user);
+                }
+                else
+                {
+                    //This guild is not in the user's list. We are not going to update the list.
+                }
+            }
+
+            //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests[0]);
             $this->respond(200, $guild);
         }
         
