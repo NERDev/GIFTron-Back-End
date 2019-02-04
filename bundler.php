@@ -21,6 +21,10 @@ else
             $type = "image/$ext+xml";
             break;
         
+        case 'png':
+            $type = "image/$ext";
+            break;
+                    
         default:
             $type = "text/html";
             break;
