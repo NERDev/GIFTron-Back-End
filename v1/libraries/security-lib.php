@@ -76,19 +76,16 @@ class Security
 
         if ($owner)
         {
-            return "this user is owner";
-        }
-
-        if ($this->user->id == 344270592037486595)
-        {
-            return "this user is christian";
+            //return "this user is owner";
+            return true;
         }
 
         //check if user's in an access role
         $guild = $this->storage->read("guilds/$guildID")->data;
         if ($guild->settings->access_roles && array_intersect($guild->settings->access_roles, $this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles))
         {
-            return "this user is in one or more access role";
+            //return "this user is in one or more access role";
+            return true;
         }
 
         if (!$guild->settings->strict)
@@ -113,7 +110,8 @@ class Security
 
             if (array_intersect(["generalAdministrator", "generalManageServer"], $perms))
             {
-                return "this user has sufficient privileges, and 'strict' is not set for the server";
+                //return "this user has sufficient privileges, and 'strict' is not set for the server";
+                return true;
             }
         }
 
