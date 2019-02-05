@@ -175,7 +175,7 @@ class APIhost extends Security
                 if (!$this->storage->read("guilds/$guildID"))
                 {
                     //Add guild to User's list, and instantiate it.
-                    
+
                     $this->user->guilds->$guildID = true;
                     
                     $this->storage->write("guilds/$guildID", [
@@ -229,7 +229,52 @@ class APIhost extends Security
 
     function user()
     {
-        $this->user ? $this->respond(200, $this->user) : $this->respond(401, "Please log in.");
+        $this->user ?: $this->respond(401, "Please log in.");
+        unset($this->user->guilds);
+        $this->respond(200, $this->user);
+    }
+
+    function user_guilds()
+    {
+        if ($_SERVER['REQUEST_METHOD'] == 'GET')
+        {
+            $this->respond(200, $this->user->guilds);
+
+            //There are 3 things to take into account:
+            //1. The user's discord guilds
+            //2. The guilds the user has added manually
+            //3. The guilds that exist on our system
+            //We need to find the intersection of all 3, and return the permissions
+            //It's safe to assume the guilds the user added manually are part of our system...
+            //Let's check the discord guilds against our system... then tack on all the manually-added guilds, and finally remove all the duplicates.
+            //In the event that one of the Discord guilds shows up in our system, but is not in the user's list... Check the permissions, add it to their list, and flag the user data to be written to filesystem.
+
+
+
+
+            /*
+            foreach (array_column($this->discord->user->guilds, 'id') as $guildID)
+            {
+                if ($this->storage->read("guilds/$guildID"))
+                {
+                    //This guild exists in both their Discord, and our system.
+                    isset($this->user->guilds->$guildID) ?: $this->user->guilds->$guildID = false;
+                    $guilds[] = $guildID;
+                }
+            }
+    
+            $this->respond(200, $guilds);
+            */
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] == 'POST')
+        {
+            $guildID = $_SERVER['QUERY_STRING'];
+            if (!$this->user->guilds->$guildID)
+            {
+                $this->user->guilds->$guildID = false;
+            }
+        }
     }
 
     function guild()
@@ -251,7 +296,7 @@ class APIhost extends Security
                 
                 if (isset($this->user->guilds->$guildID))
                 {
-                    //Guild is in the user's list. 
+                    //Guild is in the user's list.
                     $guild->manage = $this->user->guilds->$guildID;
                 }
             }
@@ -366,9 +411,10 @@ class APIhost extends Security
                 }
             }
 
-            if (isset($this->user->guilds->$guildID) && ($this->user->guilds->$guildID != $permitted))
+            //Holy jesus this if statement is a shitshow
+            if (!$short && isset($this->user->guilds->$guildID) && ($this->user->guilds->$guildID != ($permitted ?? ($permitted = $this->permitted($guildID)))))
             {
-                //The value on file for the guild, in the user's list, is not what it now is. Need to update.
+                //The value on file for the guild, in the user's list, is not what it now is... And it was a deliberate, direct request. Need to update.
                 //Note: this operation happens REGARDLESS of whether or not the user was permitted or denied. We're just changing the status.
                 $this->user->guilds->$guildID = $permitted;
                 $this->storage->write("users/{$this->user->id}", $this->user);
@@ -379,7 +425,7 @@ class APIhost extends Security
                 //Revisit this, because we need a concrete list of guilds that exist on both our system, and the user's discord
             }
 
-            //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests[0]);
+            //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
             $this->respond(200, $guild);
         }
         

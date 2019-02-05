@@ -3,6 +3,9 @@
         "auth": {
             "methods": ["GET"]
         },
+        "guilds": {
+            "methods": ["GET"]
+        },
         "methods": ["GET"]
     },
     "guild": {
