@@ -4,7 +4,7 @@
             "methods": ["GET"]
         },
         "guilds": {
-            "methods": ["GET"]
+            "methods": ["GET", "POST"]
         },
         "methods": ["GET"]
     },

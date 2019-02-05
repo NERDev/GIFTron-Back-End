@@ -164,7 +164,7 @@ class APIhost extends Security
         ])) setcookie('session', $sessionID, $this->discord->user->timeout, '/');
 
         //Check if User is attempting to add the bot to a guild
-        if ($guildID = $_GET['guild_id'])
+        if ($guildID = strval($_GET['guild_id']))
         {
             //Make sure it has the correct permissions.
             //Check if bot has already been added, or if this guild even exists.
@@ -238,42 +238,26 @@ class APIhost extends Security
     {
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
-            $this->respond(200, $this->user->guilds);
-
-            //There are 3 things to take into account:
-            //1. The user's discord guilds
-            //2. The guilds the user has added manually
-            //3. The guilds that exist on our system
-            //We need to find the intersection of all 3, and return the permissions
-            //It's safe to assume the guilds the user added manually are part of our system...
-            //Let's check the discord guilds against our system... then tack on all the manually-added guilds, and finally remove all the duplicates.
-            //In the event that one of the Discord guilds shows up in our system, but is not in the user's list... Check the permissions, add it to their list, and flag the user data to be written to filesystem.
-
-
-
-
-            /*
-            foreach (array_column($this->discord->user->guilds, 'id') as $guildID)
-            {
-                if ($this->storage->read("guilds/$guildID"))
-                {
-                    //This guild exists in both their Discord, and our system.
-                    isset($this->user->guilds->$guildID) ?: $this->user->guilds->$guildID = false;
-                    $guilds[] = $guildID;
-                }
-            }
-    
-            $this->respond(200, $guilds);
-            */
+            //OBJECTIVE: RETURN ALL POSSIBLE GUILDS, REGARDLESS OF IF THEY'RE IN THE SYSTEM OR NOT
+            //LET THE CLIENT FIGURE IT OUT
+            $this->respond(200, array_values(array_unique(array_merge(array_keys((array)$this->user->guilds), array_column($this->discord->user->guilds, 'id')))));
         }
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
         {
-            $guildID = $_SERVER['QUERY_STRING'];
-            if (!$this->user->guilds->$guildID)
+            if (!$guilds = json_decode(file_get_contents("php://input")))
             {
-                $this->user->guilds->$guildID = false;
+                $guilds[] = strval($_SERVER['QUERY_STRING']);
             }
+            
+            foreach ($guilds as $guildID)
+            {
+                if (!isset($this->user->guilds->$guildID) && $this->storage->read("guilds/$guildID"))
+                {
+                    $this->user->guilds->$guildID = false;
+                }
+            }
+            $this->respond(200, $this->user->guilds);
         }
     }
 
