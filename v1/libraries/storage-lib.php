@@ -154,11 +154,7 @@ class Storage
 
     protected function locate($id)
     {
-        $hash = sha1($id);
-        $fragment = substr($hash, 0, 4);
-        $int = base_convert($fragment, 16, 10) * 131;
-        $remainder = (($int / 127) | 0) % 650;
-        return $this->base650[$remainder];
+        return $this->base650[((((base_convert(substr(sha1($id), 0, 4), 16, 10) * 131) / 127) | 0) % 650)];
     }
 
     protected function unhash($hash)
