@@ -12,11 +12,6 @@ else
 {
     $ext = end(explode('.', $qs));
     switch ($ext) {
-        case 'css':
-        case 'js':
-            $type = "text/$ext";
-            break;
-
         case 'svg':
             $type = "image/$ext+xml";
             break;
@@ -24,9 +19,13 @@ else
         case 'png':
             $type = "image/$ext";
             break;
-                    
+
+        case 'ico':
+            $type = "image/x-icon";
+            break;
+
         default:
-            $type = "text/html";
+            $type = "text/$ext";
             break;
     }
     header("Content-type: $type");
