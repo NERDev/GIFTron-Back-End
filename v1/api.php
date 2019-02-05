@@ -242,8 +242,9 @@ class APIhost extends Security
             $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
             $short = $_GET['short'] === "" ? true : $_GET['short'];
             
-            if ($short || !$staff = $this->is_staff() || !$permitted = $this->permitted($guildID))
+            if ($short || ((!$staff = $this->is_staff()) && (!$permitted = $this->permitted($guildID))))
             {
+                //if it was requested, or is both not permitted AND not a staff member
                 unset($guild->settings);
                 unset($guild->wallet);
                 $guild->setup = !(!$guild->settings->channels || $guild->settings->access_roles === null);
@@ -365,20 +366,17 @@ class APIhost extends Security
                 }
             }
 
-            if (isset($permitted))
+            if (isset($this->user->guilds->$guildID) && ($this->user->guilds->$guildID != $permitted))
             {
-                //This means someone who's not a staff member made a direct request to view information for a guild.
-                if (isset($this->user->guilds->$guildID) && ($this->user->guilds->$guildID != $permitted))
-                {
-                    //The value on file for the guild, in the user's list, is not what it now is. Need to update.
-                    //Note: this operation happens REGARDLESS of whether or not the user was permitted or denied. We're just changing the status.
-                    $this->user->guilds->$guildID = $permitted;
-                    $this->storage->write("users/{$this->user->id}", $this->user);
-                }
-                else
-                {
-                    //This guild is not in the user's list. We are not going to update the list.
-                }
+                //The value on file for the guild, in the user's list, is not what it now is. Need to update.
+                //Note: this operation happens REGARDLESS of whether or not the user was permitted or denied. We're just changing the status.
+                $this->user->guilds->$guildID = $permitted;
+                $this->storage->write("users/{$this->user->id}", $this->user);
+            }
+            else
+            {
+                //This guild is not in the user's list. We are not going to update the list.
+                //Revisit this, because we need a concrete list of guilds that exist on both our system, and the user's discord
             }
 
             //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests[0]);
