@@ -311,8 +311,6 @@ class APIhost extends Security
 
                 if (!$guild->settings->channels) $guild->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, "giveaway");
                 if ($guild->settings->access_roles === null) $guild->setup->access_roles = match_suggested($this->discord->bot->guilds->$guildID->info->roles, ["owner", "admin"]);
-
-                $this->respond(200, $guild);
             }
 
             //Holy jesus this if statement is a shitshow
