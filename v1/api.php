@@ -268,10 +268,8 @@ class APIhost extends Security
             //error_reporting(E_ALL); ini_set('display_errors', 1);
             $guildID = (count($_GET) == 1 ? (reset($_GET) ?: (string)key($_GET)) : $_GET['guild_id']) ?:
             $this->respond(400, "Which guild did you want information for?");
-            $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
-            $short = $_GET['short'] === "" ? true : $_GET['short'];
-            
-            if ($short || ((!$staff = $this->is_staff()) && (!$permitted = $this->permitted($guildID))))
+            $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");            
+            if (($short = $_GET['short'] === "" ? true : $_GET['short']) || ((!$staff = $this->is_staff()) && (!$permitted = $this->permitted($guildID))))
             {
                 //if it was requested, or is both not permitted AND not a staff member
                 unset($guild->settings);
@@ -286,113 +284,35 @@ class APIhost extends Security
             }
             else
             {
-                if (!$guild->settings->channels)
+                //Objective: return list of suggested channels, and list of available channels minus suggested channels
+
+                function match_suggested($data, $matches)
                 {
-                    $match = 'giveaway';
-                    $channels = $this->discord->bot->guilds->$guildID->channels;
-    
-                    if ($channels)
-                    {
-                        //Build tree of channels
-    
-                        foreach ($channels as $i => $channel)
-                        {
-                            if ($channel->type == 4)
-                            {
-                                $categories[$channel->id];
-                            }
-    
-                            if ($channel->type == 0)
-                            {
-                                $availableChannels[$channel->id] = $channel->name;
-                                $categories[$channel->parent_id ?? $channel->guild_id][] = $channel;
-                            }
-                        }
-    
-                        //Obtain list of suggested channels
-    
-                        foreach ($channels as $channel)
-                        {
-                            if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $channel->name)), $match))
-                            {
-                                if ($channel->type == 0)
-                                {
-                                    $suggestedChannels[$channel->id] = $channel->name;
-                                }
-    
-                                if ($channel->type == 4)
-                                {
-                                    foreach ($categories[$channel->id] as $child)
-                                    {
-                                        if ($child->type == 0)
-                                        {
-                                            $suggestedChannels[$child->id] = $child->name;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-    
-                        $guild->setup[] = [
-                            "channels" => [
-                                "suggested" => $suggestedChannels,
-                                "available" => array_diff($availableChannels, (array)$suggestedChannels)
-                            ]
-                        ];
-                    }
-                    else
-                    {
-                        if (!$this->discord->bot->guilds->$guildID->info)
-                        {
-                            $guild->setup = [
-                                "guild" => [
-                                    "add"
-                                ]
-                            ];
+                    $matches = is_array($matches) ? $matches : [$matches];
+                    foreach ($channels = array_filter(array_map(function ($channel) {
+                        if (!(decbin($channel->type) & 3)) return $channel;
+                    }, $data)) as $channel) {
+                        if ($channel->type == 0) {
+                            $tree[intval($channel->parent_id)][] = $channel->id;
+                            $availableChannels[$channel->id] = $channel->name;
                         }
                     }
+                    foreach ($lookup = array_column($channels, 'name', 'id') as $id => $name) {
+                        foreach ($matches as $match) {
+                            if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $name)), $match))
+                            foreach (($tree[$id] ?: [$id]) as $channelid) {
+                                $suggestedChannels[$channelid] = $lookup[$channelid];
+                            }
+                        }
+                    }
+                    return (object)["suggested" => $suggestedChannels,
+                    "available" => array_diff($availableChannels, $suggestedChannels) ?: $availableChannels];
                 }
-    
-                if ($guild->settings->access_roles === null)
-                {
-                    $matches = ["admin", "owner"];
-                    $roles = $this->discord->bot->guilds->$guildID->info->roles;
-    
-                    if ($roles)
-                    {
-                        //Obtain list of suggested channels
-                        foreach ($roles as $role)
-                        {
-                            $availableRoles[$role->id] = $role->name;
-    
-                            foreach ($matches as $match)
-                            {
-                                if (strstr(strtolower(preg_replace("/[^a-zA-Z]/", '', $role->name)), $match))
-                                {
-                                    $suggestedRoles[$role->id] = $role->name;
-                                }
-                            }
-                        }
-    
-                        $guild->setup[] = [
-                            "access_roles" => [
-                                "suggested" => $suggestedRoles,
-                                "available" => array_diff($availableRoles, (array)$suggestedRoles)
-                            ]
-                        ];
-                    }
-                    else
-                    {
-                        if (!$this->discord->bot->guilds->$guildID->info)
-                        {
-                            $guild->setup = [
-                                "guild" => [
-                                    "add"
-                                ]
-                            ];
-                        }
-                    }
-                }
+
+                if (!$guild->settings->channels) $guild->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, "giveaway");
+                if ($guild->settings->access_roles === null) $guild->setup->access_roles = match_suggested($this->discord->bot->guilds->$guildID->info->roles, ["owner", "admin"]);
+
+                $this->respond(200, $guild);
             }
 
             //Holy jesus this if statement is a shitshow
