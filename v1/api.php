@@ -289,30 +289,6 @@ class APIhost extends Security
     {
         $guildID = (count($_GET) == 1 ? (reset($_GET) ?: (string)key($_GET)) : $_GET['guild_id']) ?:
         $this->respond(400, "Which guild did you want?");
-
-        try {
-            $this->discord->bot->guilds->$guildID->channels;
-        } catch (\Throwable $th) {
-            $e = $this->parseException($th);
-            if ($e->details->HTTP == 403)
-            {
-                $e->code = 400;
-                $e->message = "We need permission to see this guild's channels in order to complete this request.";
-            }
-            $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the channels for this guild.");
-        }
-
-        try {
-            $this->discord->bot->guilds->$guildID->info;
-        } catch (\Throwable $th) {
-            $e = $this->parseException($th);
-            if ($e->details->HTTP == 403)
-            {
-                $e->code = 400;
-                $e->message = "We need permission to see this guild's info in order to complete this request.";
-            }
-            $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the info for this guild.");
-        }
         
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
@@ -335,6 +311,7 @@ class APIhost extends Security
             {
                 //Objective: return list of suggested channels, and list of available channels minus suggested channels
 
+                
                 function match_suggested($data, $matches)
                 {
                     $matches = is_array($matches) ? $matches : [$matches];
@@ -357,12 +334,35 @@ class APIhost extends Security
                     return (object)["suggested" => $suggestedChannels,
                     "available" => array_diff($availableChannels, $suggestedChannels) ?: $availableChannels];
                 }
+                
+                try {
+                    $this->discord->bot->guilds->$guildID->channels;
+                } catch (\Throwable $th) {
+                    $e = $this->parseException($th);
+                    if ($e->details->HTTP == 403)
+                    {
+                        $e->code = 400;
+                        $e->message = "We need permission to see this guild's channels in order to complete this request.";
+                    }
+                    $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the channels for this guild.");
+                }
+
+                try {
+                    $this->discord->bot->guilds->$guildID->info;
+                } catch (\Throwable $th) {
+                    $e = $this->parseException($th);
+                    if ($e->details->HTTP == 403)
+                    {
+                        $e->code = 400;
+                        $e->message = "We need permission to see this guild's info in order to complete this request.";
+                    }
+                    $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the info for this guild.");
+                }
 
                 if (!$guild->settings->channels) $guild->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, "giveaway");
                 if ($guild->settings->access_roles === null) $guild->setup->access_roles = match_suggested($this->discord->bot->guilds->$guildID->info->roles, ["owner", "admin"]);
             }
 
-            //Holy jesus this if statement is a shitshow
             if (!$short && isset($this->user->guilds->$guildID) && ($this->user->guilds->$guildID != ($permitted ?? ($permitted = $this->permitted($guildID)))))
             {
                 //The value on file for the guild, in the user's list, is not what it now is... And it was a deliberate, direct request. Need to update.
