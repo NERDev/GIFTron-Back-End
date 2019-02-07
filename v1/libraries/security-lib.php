@@ -76,7 +76,11 @@ class Security
     
     function permitted($guildID)
     {
-        $owner = $this->discord->bot->guilds->$guildID->info->owner_id == $this->user->id;
+        try {
+            $owner = $this->discord->bot->guilds->$guildID->info->owner_id == $this->user->id;
+        } catch (\Throwable $th) {
+            return false;
+        }
 
         if ($owner)
         {
