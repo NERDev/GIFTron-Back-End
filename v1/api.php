@@ -363,17 +363,27 @@ class APIhost extends Security
                 if ($guild->settings->access_roles === null) $guild->setup->access_roles = match_suggested($this->discord->bot->guilds->$guildID->info->roles, ["owner", "admin"]);
             }
 
-            if (!$short && isset($this->user->guilds->$guildID) && ($this->user->guilds->$guildID != ($permitted ?? ($permitted = $this->permitted($guildID)))))
+            if (!$short && isset($this->user->guilds->$guildID))
             {
-                //The value on file for the guild, in the user's list, is not what it now is... And it was a deliberate, direct request. Need to update.
-                //Note: this operation happens REGARDLESS of whether or not the user was permitted or denied. We're just changing the status.
-                $this->user->guilds->$guildID = $permitted;
-                $this->storage->write("users/{$this->user->id}", $this->user);
+                //Deliberate query and in user's list
+                if ($this->user->guilds->$guildID != ($permitted ?? ($permitted = $this->permitted($guildID))))
+                {
+                    //The value on file for the guild, in the user's list, is not what it now is... And it was a deliberate, direct request. Need to update.
+                    //Note: this operation happens REGARDLESS of whether or not the user was permitted or denied. We're just changing the status.
+                    $this->user->guilds->$guildID = $permitted;
+                    $this->storage->write("users/{$this->user->id}", $this->user);
+                }
+                
+                if ($this->discord->bot->guilds->$guildID->info->icon != $guild->icon || $this->discord->bot->guilds->$guildID->info->name != $guild->name)
+                {
+                    $guild->icon = $this->discord->bot->guilds->$guildID->info->icon;
+                    $guild->name = $this->discord->bot->guilds->$guildID->info->name;
+                    $this->storage->write("guilds/{$guild->id}", $guild);
+                }
             }
             else
             {
                 //This guild is not in the user's list. We are not going to update the list.
-                //Revisit this, because we need a concrete list of guilds that exist on both our system, and the user's discord
             }
 
             //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
