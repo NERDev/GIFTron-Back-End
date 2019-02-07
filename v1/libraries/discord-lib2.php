@@ -37,40 +37,55 @@ abstract class HTTP
         return implode("\r\n", $headers);
     }
 
+    private static function parseHeaders($headers)
+    {
+        $responsecode = explode(' ', array_shift($headers))[1];
+        if (!$responsecode) return;
+        foreach ($headers as $header)
+        {
+            $headerdata = explode(":", $header, 2);
+            $newheaders[$headerdata[0]] = trim($headerdata[1]);
+        }
+        $newheaders['HTTP'] = $responsecode;
+        return $newheaders;
+    }
+
     static function get($url)
     {
-        //var_dump("Executing GET on $url");
         self::$requests[] = $url;
-
         $prevobj = debug_backtrace()[1]['object'];
         $tokentype = self::type(explode('/', $prevobj->context)[0]);
-        //var_dump("$tokentype, $prevobj->token", $prevobj, "Authorization: $tokentype {$prevobj->token}\r\n");
-        return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
+        $response = json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
                 "header" => "Authorization: $tokentype {$prevobj->token}\r\n"
             ]
         ])));
+        $headers = self::parseHeaders($http_response_header);
+        if (substr($headers['HTTP'], 0, 1) == 2) return $response;
+        if (!$headers) $headers['HTTP'] = 0;
+        $headers['HTTP'] = intval($headers['HTTP']);
+        throw new \Exception(json_encode($headers));
     }
     
     static function post($url, $data)
     {
-        //var_dump("Executing POST on $url");
         self::$requests[] = $url;
-
         $prevobj = debug_backtrace()[1]['object'];
         $tokentype = self::type(explode('/', $prevobj->context)[0]);
         $tokentype && $headers['Authorization'] = "$tokentype {$prevobj->token}";
         $headers['Content-Type'] = "application/" . (json_decode($data) ? 'json' : 'x-www-form-urlencoded');
-        
-        //var_dump(self::buildHeaders($headers));
-
-        return json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
+        $response = json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
             'http' => [
                 'header'  => self::buildHeaders($headers),
                 'method'  => 'POST',
                 'content' => $data,
             ]
         ])));
+        $headers = self::parseHeaders($http_response_header);
+        if (substr($headers['HTTP'], 0, 1) == 2) return $response;
+        if (!$headers) $headers['HTTP'] = 0;
+        $headers['HTTP'] = intval($headers['HTTP']);
+        throw new \Exception(json_encode($headers));
     }
 }
 

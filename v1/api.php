@@ -141,12 +141,23 @@ class APIhost extends Security
         }
 
         isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
-        $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
+        try {
+            $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
+        } catch (\Throwable $th) {
+            $e = $this->parseException($th);
+            $this->respond($e->code ?: 500, $e->$message ?: "Authorization is unavailable at this time.");
+        }
 
         if (!$this->user)
         {
             //Get User info
             $localUserData = $this->storage->read("users/{$this->discord->user->info->id}")->data;
+            try {
+                $this->discord->user->info;
+            } catch (\Throwable $th) {
+                $e = $this->parseException($th);
+                $this->respond($e->code ?: 500, $e->$message ?: "Could not retrieve user info from Discord.");
+            }
             $this->user = (object) array_merge(
                 (array) $localUserData,
                 (array) $this->discord->user->info
@@ -168,7 +179,7 @@ class APIhost extends Security
         {
             //Make sure it has the correct permissions.
             //Check if bot has already been added, or if this guild even exists.
-            if ($this->discord->bot->guilds->$guildID->info)
+            if (@$this->discord->bot->guilds->$guildID->info)
             {
                 //Bot is verifiably added to this guild.
 
@@ -194,7 +205,7 @@ class APIhost extends Security
                     ]);
 
                     //Alert to the welcome channel that we have a new member
-                    var_dump("addnew", $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                    var_dump("addnew", @$this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
                         "Attention! <@".$this->user->id."> just added me to " .
                         $this->discord->bot->guilds->$guildID->info->name . "!"
                     ));
@@ -212,7 +223,7 @@ class APIhost extends Security
             else
             {
                 //Bot has been removed from this guild.
-                $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                @$this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
                     "Uh oh! <@".$this->user->id."> just tried to add me to $guildID, but I'm not in that guild.
                     Something's wrong."
                 );
@@ -240,6 +251,17 @@ class APIhost extends Security
         {
             //OBJECTIVE: RETURN ALL POSSIBLE GUILDS, REGARDLESS OF IF THEY'RE IN THE SYSTEM OR NOT
             //LET THE CLIENT FIGURE IT OUT
+            try {
+                $this->discord->user->guilds;
+            } catch (\Throwable $th) {
+                $e = $this->parseException($th);
+                if ($e->details->HTTP == 403)
+                {
+                    $e->code = 400;
+                    $e->message = "We need permission to see your guilds in order to complete this request.";
+                }
+                $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the guilds for this user.");
+            }
             $this->respond(200, array_values(array_unique(array_merge(array_keys((array)$this->user->guilds), array_column($this->discord->user->guilds, 'id')))));
         }
 
@@ -263,12 +285,37 @@ class APIhost extends Security
 
     function guild()
     {
+        $guildID = (count($_GET) == 1 ? (reset($_GET) ?: (string)key($_GET)) : $_GET['guild_id']) ?:
+        $this->respond(400, "Which guild did you want?");
+
+        try {
+            $this->discord->bot->guilds->$guildID->channels;
+        } catch (\Throwable $th) {
+            $e = $this->parseException($th);
+            if ($e->details->HTTP == 403)
+            {
+                $e->code = 400;
+                $e->message = "We need permission to see this guild's channels in order to complete this request.";
+            }
+            $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the channels for this guild.");
+        }
+
+        try {
+            $this->discord->bot->guilds->$guildID->info;
+        } catch (\Throwable $th) {
+            $e = $this->parseException($th);
+            if ($e->details->HTTP == 403)
+            {
+                $e->code = 400;
+                $e->message = "We need permission to see this guild's info in order to complete this request.";
+            }
+            $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the info for this guild.");
+        }
+        
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
             //error_reporting(E_ALL); ini_set('display_errors', 1);
-            $guildID = (count($_GET) == 1 ? (reset($_GET) ?: (string)key($_GET)) : $_GET['guild_id']) ?:
-            $this->respond(400, "Which guild did you want information for?");
-            $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");            
+            $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
             if (($short = $_GET['short'] === "" ? true : $_GET['short']) || ((!$staff = $this->is_staff()) && (!$permitted = $this->permitted($guildID))))
             {
                 //if it was requested, or is both not permitted AND not a staff member
@@ -500,9 +547,13 @@ class APIhost extends Security
 
                 $this->storage->write("orders/$id", $order);
 
-                $this->discord->bot->channels->{SERVER_ORDERS}->postMessage(
-                    "<@".$this->user->id."> from {$this->discord->bot->guilds->$guildID->info->name} placed order number `$id` for $gameSlug with \$$guild->wallet"
-                );
+                try {
+                    $this->discord->bot->channels->{SERVER_ORDERS}->postMessage(
+                        "<@".$this->user->id."> from {$this->discord->bot->guilds->$guildID->info->name} placed order number `$id` for $gameSlug with \$$guild->wallet"
+                    );
+                } catch (\Throwable $th) {
+                    $this->respond(500, "We could not alert our team about your order! Please contact them IMMEDIATELY!");
+                }
                 $order->id = $id;
                 $this->respond(200, $order);
             }
@@ -556,7 +607,7 @@ class APIhost extends Security
             }
 
             $this->storage->write("orders/$orderID", $order);
-            $this->discord->bot->channels->{SERVER_ORDERS}->postMessage("Order `$orderID` has been $order->status.");
+            @$this->discord->bot->channels->{SERVER_ORDERS}->postMessage("Order `$orderID` has been $order->status.");
             $this->respond(200, $order);
         }
 

@@ -67,7 +67,11 @@ class Security
     function is_staff($user_id = null)
     {
         $user_id = $user_id ?: $this->user->id;
-        return in_array(NERDEV_EMPLOYEE, $this->discord->bot->guilds->{NERDEV}->members->$user_id->info->roles);
+        try {
+            return in_array(NERDEV_EMPLOYEE, $this->discord->bot->guilds->{NERDEV}->members->$user_id->info->roles);
+        } catch (\Throwable $th) {
+            return false;
+        }
     }
     
     function permitted($guildID)
@@ -117,6 +121,25 @@ class Security
 
         //none of the conditions were met: this user is not permitted
         return false;
+    }
+
+    function parseException($exception)
+    {
+        $trace = (object)$exception->getTrace()[1];
+        $where = "$trace->class$trace->type$trace->function";
+        $details = json_decode($exception->getMessage());
+        if (substr($exception->details->HTTP, 0, 1) == 5)
+        {
+            $code = 500;
+            $message = "We are having trouble contacting Discord.";
+        }
+        
+        if ($exception->details->HTTP == 429)
+        {
+            $code = 500;
+            $message = "We are being rate-limited. Please try again later.";
+        }
+        return (object)["code" => $code, "message" => $message, "details" => $details];
     }
 
     //Old Hash Function
