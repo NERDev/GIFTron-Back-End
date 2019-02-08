@@ -296,6 +296,7 @@ class APIhost extends Security
         $guildID = (count($_GET) == 1 ? (reset($_GET) ?: (string)key($_GET)) : $_GET['guild_id']) ?:
         $this->respond(400, "Which guild did you want?");
 
+        /*
         if ($_SERVER['REQUEST_METHOD'] == 'HEAD')
         {
             if ($this->storage->read("guilds/$guildID")->data)
@@ -307,11 +308,12 @@ class APIhost extends Security
                 http_response_code(204);
             }
         }
+        */
         
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
             //error_reporting(E_ALL); ini_set('display_errors', 1);
-            $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(404, "We don't have this guild in our system.");
+            $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(204, "We don't have this guild in our system.");
             if ((!$permitted = $this->permitted($guildID)) && (!$staff = $this->is_staff()))
             {
                 //if user is both not permitted AND not a staff member
