@@ -21,7 +21,7 @@
         "wallet": {
             "methods": ["GET", "PUT"]
         },
-        "methods": ["GET", "POST"]
+        "methods": ["GET", "POST", "HEAD"]
     },
     "order": {
         "methods": ["GET", "POST"]
