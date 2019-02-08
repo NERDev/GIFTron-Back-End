@@ -54,10 +54,12 @@ class Security
         }
     }
 
+    /*
     protected function parse_session($sessionID)
     {
         return $this->storage->read("sessions/$sessionID")->data;
     }
+    */
 
     function sanitize()
     {
