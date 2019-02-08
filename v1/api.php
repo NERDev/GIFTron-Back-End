@@ -150,7 +150,7 @@ class APIhost extends Security
             $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
         } catch (\Throwable $th) {
             $e = $this->parseException($th);
-            $this->respond($e->code ?: 500, $e->$message ?: "Authorization is unavailable at this time.");
+            $this->respond($e->code ?: 501, $e->$message ?: "Authorization is unavailable at this time.");
         }
 
         if (!$this->user)
@@ -161,7 +161,7 @@ class APIhost extends Security
                 $this->discord->user->info;
             } catch (\Throwable $th) {
                 $e = $this->parseException($th);
-                $this->respond($e->code ?: 500, $e->$message ?: "Could not retrieve user info from Discord.");
+                $this->respond($e->code ?: 501, $e->$message ?: "Could not retrieve user info from Discord.");
             }
             $this->user = (object) array_merge(
                 (array) $localUserData,
@@ -267,11 +267,10 @@ class APIhost extends Security
                     $e->code = 400;
                     $e->message = "We need permission to see your guilds in order to complete this request.";
                 }
-                $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the guilds for this user.");
+                $this->respond($e->code ?: 501, $e->$message ?: "We cannot retrieve the guilds for this user.");
             }
-            $this->respond(200, array_values(array_unique(array_merge(
-            array_map('strval',array_keys((array)$this->user->guilds)),
-            array_column($this->discord->user->guilds, 'id')))));
+            $discordguilds = array_column($this->discord->user->guilds, 'id');
+            $this->respond(200, (array)$this->user->guilds + array_combine($discordguilds, array_fill(0, count($discordguilds), false)));
         }
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
@@ -296,29 +295,32 @@ class APIhost extends Security
     {
         $guildID = (count($_GET) == 1 ? (reset($_GET) ?: (string)key($_GET)) : $_GET['guild_id']) ?:
         $this->respond(400, "Which guild did you want?");
+
+        if ($_SERVER['REQUEST_METHOD'] == 'HEAD')
+        {
+            if ($this->storage->read("guilds/$guildID")->data)
+            {
+                http_response_code(200);
+            }
+            else
+            {
+                http_response_code(204);
+            }
+        }
         
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
             //error_reporting(E_ALL); ini_set('display_errors', 1);
-            $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild in our system.");
-            if (($short = $_GET['short'] === "" ? true : $_GET['short']) || ((!$staff = $this->is_staff()) && (!$permitted = $this->permitted($guildID))))
+            $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(404, "We don't have this guild in our system.");
+            if ((!$permitted = $this->permitted($guildID)) && (!$staff = $this->is_staff()))
             {
-                //if it was requested, or is both not permitted AND not a staff member
+                //if user is both not permitted AND not a staff member
                 unset($guild->settings);
                 unset($guild->wallet);
-                $guild->setup = !(!$guild->settings->channels || $guild->settings->access_roles === null);
-                
-                if (isset($this->user->guilds->$guildID))
-                {
-                    //Guild is in the user's list.
-                    $guild->manage = $this->user->guilds->$guildID;
-                }
             }
             else
             {
                 //Objective: return list of suggested channels, and list of available channels minus suggested channels
-
-                
                 function match_suggested($data, $matches)
                 {
                     $matches = is_array($matches) ? $matches : [$matches];
@@ -351,7 +353,7 @@ class APIhost extends Security
                         $e->code = 400;
                         $e->message = "We need permission to see this guild's channels in order to complete this request.";
                     }
-                    $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the channels for this guild.");
+                    $this->respond($e->code ?: 501, $e->$message ?: "We cannot retrieve the channels for this guild.");
                 }
 
                 try {
@@ -363,38 +365,32 @@ class APIhost extends Security
                         $e->code = 400;
                         $e->message = "We need permission to see this guild's info in order to complete this request.";
                     }
-                    $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the info for this guild.");
+                    $this->respond($e->code ?: 501, $e->$message ?: "We cannot retrieve the info for this guild.");
                 }
 
-                if (!$guild->settings->channels) $guild->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, "giveaway");
-                if ($guild->settings->access_roles === null) $guild->setup->access_roles = match_suggested($this->discord->bot->guilds->$guildID->info->roles, ["owner", "admin"]);
+                if (!$guild->settings->channels) $guildtemp->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, "giveaway");
+                if ($guild->settings->access_roles === null) $guildtemp->setup->access_roles = match_suggested($this->discord->bot->guilds->$guildID->info->roles, ["owner", "admin"]);
             }
 
-            if (!$short && isset($this->user->guilds->$guildID))
+            
+            if ($this->user->guilds->$guildID != ($permitted ?? ($permitted = $this->permitted($guildID))))
             {
-                //Deliberate query and in user's list
-                if ($this->user->guilds->$guildID != ($permitted ?? ($permitted = $this->permitted($guildID))))
-                {
-                    //The value on file for the guild, in the user's list, is not what it now is... And it was a deliberate, direct request. Need to update.
-                    //Note: this operation happens REGARDLESS of whether or not the user was permitted or denied. We're just changing the status.
-                    $this->user->guilds->$guildID = $permitted;
-                    $this->storage->write("users/{$this->user->id}", $this->user);
-                }
-
-                if ($this->discord->bot->guilds->$guildID->info->icon != $guild->icon || $this->discord->bot->guilds->$guildID->info->name != $guild->name)
-                {
-                    $guild->icon = $this->discord->bot->guilds->$guildID->info->icon;
-                    $guild->name = $this->discord->bot->guilds->$guildID->info->name;
-                    $this->storage->write("guilds/{$guild->id}", $guild);
-                }
+                //The value on file for the guild, in the user's list, is not what it now is... And it was a deliberate, direct request. Need to update.
+                //Note: this operation happens REGARDLESS of whether or not the user was permitted or denied. We're just changing the status.
+                $this->user->guilds->$guildID = $permitted;
+                $this->storage->write("users/{$this->user->id}", $this->user);
             }
-            else
+
+            if ($this->discord->bot->guilds->$guildID->info->icon != $guild->icon || $this->discord->bot->guilds->$guildID->info->name != $guild->name)
             {
-                //This guild is not in the user's list. We are not going to update the list.
+                //Guild icon or name changed at some point
+                $guild->icon = $this->discord->bot->guilds->$guildID->info->icon;
+                $guild->name = $this->discord->bot->guilds->$guildID->info->name;
+                $this->storage->write("guilds/$guildID", $guild);
             }
 
             //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
-            $this->respond(200, $guild);
+            $this->respond(200, array_merge((array)$guild, (array)$guildtemp));
         }
         
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
