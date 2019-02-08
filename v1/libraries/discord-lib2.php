@@ -106,6 +106,24 @@ class User extends API
             'scope'         => 'identify'
         ]));
         $this->token = $response->access_token;
+        $this->refreshtoken = $response->refresh_token;
+        $this->timeout = ($response->expires_in + time() - ini_get('default_socket_timeout'));
+        return (bool)$response;
+    }
+
+    function reauth($refreshtoken)
+    {
+        $redirectUri = "http://dev.nerdev.io/giftron/api/v1/user/auth/index.php";
+        $response = HTTP::post('/oauth2/token', http_build_query([
+            'client_id'     => HTTP::$clientId,
+            'client_secret' => HTTP::$clientSecret,
+            'grant_type'    => 'refresh_token',
+            'refresh_token' => $refreshtoken,
+            'redirect_uri'  => $redirectUri,
+            'scope'         => 'identify'
+        ]));
+        $this->token = $response->access_token;
+        $this->refreshtoken = $response->refresh_token;
         $this->timeout = ($response->expires_in + time() - ini_get('default_socket_timeout'));
         return (bool)$response;
     }

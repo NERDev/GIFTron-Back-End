@@ -98,21 +98,26 @@ class APIhost extends Security
         //Don't freak out, these credentials are public on G2A's documentation.
         $this->g2a = new \G2A\API("qdaiciDiyMaTjxMt", "74026b3dc2c6db6a30a73e71cdb138b1e1b5eb7a97ced46689e2d28db1050875");
         
-        if ($this->session = $this->parse_session($_COOKIE['session']))
+        if ($this->session = $this->storage->read("sessions/" . $_COOKIE['session'])->data)
         {
             //session exists
-            if (time() < $this->session->expires)
-            {
-                //session hasn't expired yet
-                $this->user = $this->storage->read("users/" . $this->session->user)->data;
-                $this->discord->user->token = $this->session->token;
-            }
-            else
+            if (time() > $this->session->expires)
             {
                 //reauth using the refresh token
-                //$this->discord->user->reauth($this->session->refreshtoken);
-                $this->respond(200, "reauthorizing...");
+                try {
+                    $this->discord->user->reauth($this->session->refreshtoken);
+                } catch (\Throwable $th) {
+                    setcookie('session', null, -1, '/');
+                    $this->respond(400, "Reauthorization failure");
+                }
+                $this->session->token = $this->discord->user->token;
+                $this->session->refreshtoken = $this->discord->user->refreshtoken;
+                $this->session->expires = $this->discord->user->timeout;
+                $this->storage->write("sessions/" . $_COOKIE['session'], $this->session);
+                setcookie('session', $_COOKIE['session'], null, '/');
             }
+            $this->user = $this->storage->read("users/" . $this->session->user)->data;
+            $this->discord->user->token = $this->session->token;
         }
     }
 
@@ -168,11 +173,12 @@ class APIhost extends Security
         //Create session for User
         $sessionID = md5(uniqid(random_int(0,999), TRUE));
         if ($this->storage->write("sessions/$sessionID", [
-            "user"    => $this->user->id,
-            "token"   => $this->discord->user->token,
-            "expires" => $this->discord->user->timeout,
-            "ip"      => $_SERVER['REMOTE_ADDR']
-        ])) setcookie('session', $sessionID, $this->discord->user->timeout, '/');
+            "user"          => $this->user->id,
+            "token"         => $this->discord->user->token,
+            "refreshtoken"  => $this->discord->user->refreshtoken,
+            "expires"       => $this->discord->user->timeout,
+            "ip"            => $_SERVER['REMOTE_ADDR']
+        ])) setcookie('session', $sessionID, null, '/');
 
         //Check if User is attempting to add the bot to a guild
         if ($guildID = strval($_GET['guild_id']))
@@ -233,7 +239,7 @@ class APIhost extends Security
 
         //Check if User has been updated with new information
         //var_dump($this->user);
-        $this->storage->write("users/" . $this->user->id, $this->user);
+        $this->storage->write("users/{$this->user->id}", $this->user);
         //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.");
         $this->redirect("/giftron");
     }
@@ -247,6 +253,7 @@ class APIhost extends Security
 
     function user_guilds()
     {
+        $this->user ?: $this->respond(401, "Please log in.");
         if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
             //OBJECTIVE: RETURN ALL POSSIBLE GUILDS, REGARDLESS OF IF THEY'RE IN THE SYSTEM OR NOT
@@ -373,7 +380,7 @@ class APIhost extends Security
                     $this->user->guilds->$guildID = $permitted;
                     $this->storage->write("users/{$this->user->id}", $this->user);
                 }
-                
+
                 if ($this->discord->bot->guilds->$guildID->info->icon != $guild->icon || $this->discord->bot->guilds->$guildID->info->name != $guild->name)
                 {
                     $guild->icon = $this->discord->bot->guilds->$guildID->info->icon;
