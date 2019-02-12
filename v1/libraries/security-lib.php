@@ -91,6 +91,11 @@ class Security
         }
 
         //check if user's in an access role
+        try {
+            $this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles;
+        } catch (\Throwable $th) {
+            return false;
+        }
         $guild = $this->storage->read("guilds/$guildID")->data;
         if ($guild->settings->access_roles && array_intersect($guild->settings->access_roles, $this->discord->bot->guilds->$guildID->members->{$this->user->id}->info->roles))
         {
