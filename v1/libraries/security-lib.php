@@ -139,13 +139,13 @@ class Security
         $trace = (object)$exception->getTrace()[1];
         $where = "$trace->class$trace->type$trace->function";
         $details = json_decode($exception->getMessage());
-        if (substr($exception->details->HTTP, 0, 1) == 5)
+        if (substr($details->HTTP, 0, 1) == 5)
         {
             $code = 500;
             $message = "We are having trouble contacting Discord.";
         }
         
-        if ($exception->details->HTTP == 429)
+        if ($details->HTTP == 429)
         {
             $code = 500;
             $message = "We are being rate-limited. Please try again later.";
