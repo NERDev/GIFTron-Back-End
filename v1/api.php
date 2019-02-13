@@ -314,6 +314,19 @@ class APIhost extends Security
         {
             //error_reporting(E_ALL); ini_set('display_errors', 1);
             $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(204, "We don't have this guild in our system.");
+            
+            try {
+                $this->discord->bot->guilds->$guildID->info;
+            } catch (\Throwable $th) {
+                $e = $this->parseException($th);
+                if ($e->details->HTTP == 403)
+                {
+                    $e->code = 400;
+                    $e->message = "We need permission to see this guild's info in order to complete this request.";
+                }
+                $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the info for this guild.");
+            }
+
             if ((!$permitted = $this->permitted($guildID)) && (!$staff = $this->is_staff()))
             {
                 //if user is both not permitted AND not a staff member
@@ -356,18 +369,6 @@ class APIhost extends Security
                         $e->message = "We need permission to see this guild's channels in order to complete this request.";
                     }
                     $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the channels for this guild.");
-                }
-
-                try {
-                    $this->discord->bot->guilds->$guildID->info;
-                } catch (\Throwable $th) {
-                    $e = $this->parseException($th);
-                    if ($e->details->HTTP == 403)
-                    {
-                        $e->code = 400;
-                        $e->message = "We need permission to see this guild's info in order to complete this request.";
-                    }
-                    $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the info for this guild.");
                 }
 
                 if (!$guild->settings->channels) $guildtemp->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, "giveaway");
