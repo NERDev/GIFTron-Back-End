@@ -148,7 +148,13 @@ class Security
         if ($details->HTTP == 429)
         {
             $code = 500;
-            $message = "We are being rate-limited. Please try again later.";
+            $message = "We are being rate-limited.";
+        }
+
+        if ($details->HTTP == 401)
+        {
+            $code = 500;
+            $message = "we are experiencing issues on our end regarding authorization with Discord.";
         }
         return (object)["code" => $code, "message" => $message, "details" => $details];
     }
