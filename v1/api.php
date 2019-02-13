@@ -150,7 +150,7 @@ class APIhost extends Security
             $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
         } catch (\Throwable $th) {
             $e = $this->parseException($th);
-            $this->respond($e->code ?: 501, $e->$message ?: "Authorization is unavailable at this time.");
+            $this->respond($e->code ?: 501, $e->message ?: "Authorization is unavailable at this time.");
         }
 
         if (!$this->user)
@@ -161,7 +161,7 @@ class APIhost extends Security
                 $this->discord->user->info;
             } catch (\Throwable $th) {
                 $e = $this->parseException($th);
-                $this->respond($e->code ?: 501, $e->$message ?: "Could not retrieve user info from Discord.");
+                $this->respond($e->code ?: 501, $e->message ?: "Could not retrieve user info from Discord.");
             }
             $this->user = (object) array_merge(
                 (array) $localUserData,
@@ -267,7 +267,7 @@ class APIhost extends Security
                     $e->code = 400;
                     $e->message = "We need permission to see your guilds in order to complete this request.";
                 }
-                $this->respond($e->code ?: 501, $e->$message ?: "We cannot retrieve the guilds for this user.");
+                $this->respond($e->code ?: 501, $e->message ?: "We cannot retrieve the guilds for this user.");
             }
             $discordguilds = array_column($this->discord->user->guilds, 'id');
             $this->respond(200, (array)$this->user->guilds + array_combine($discordguilds, array_fill(0, count($discordguilds), false)));
@@ -355,7 +355,7 @@ class APIhost extends Security
                         $e->code = 400;
                         $e->message = "We need permission to see this guild's channels in order to complete this request.";
                     }
-                    $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the channels for this guild.");
+                    $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the channels for this guild.");
                 }
 
                 try {
@@ -367,7 +367,7 @@ class APIhost extends Security
                         $e->code = 400;
                         $e->message = "We need permission to see this guild's info in order to complete this request.";
                     }
-                    $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the info for this guild.");
+                    $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the info for this guild.");
                 }
 
                 if (!$guild->settings->channels) $guildtemp->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, "giveaway");
