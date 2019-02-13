@@ -355,7 +355,7 @@ class APIhost extends Security
                         $e->code = 400;
                         $e->message = "We need permission to see this guild's channels in order to complete this request.";
                     }
-                    $this->respond($e->code ?: 501, $e->$message ?: "We cannot retrieve the channels for this guild.");
+                    $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the channels for this guild.");
                 }
 
                 try {
@@ -367,7 +367,7 @@ class APIhost extends Security
                         $e->code = 400;
                         $e->message = "We need permission to see this guild's info in order to complete this request.";
                     }
-                    $this->respond($e->code ?: 501, $e->$message ?: "We cannot retrieve the info for this guild.");
+                    $this->respond($e->code ?: 500, $e->$message ?: "We cannot retrieve the info for this guild.");
                 }
 
                 if (!$guild->settings->channels) $guildtemp->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, "giveaway");
