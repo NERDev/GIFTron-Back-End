@@ -638,23 +638,27 @@ class APIhost extends Security
 
     function staff_reauth($internal = false)
     {
-        if ($_GET['token'])
+        if (!$this->is_staff())
         {
-            $this->discord->user->token = $_GET['token'];
+            $this->respond(400, "You are not staff.");
         }
 
-        try {
-            $data = $this->discord->user->resetBotAuth();
-        } catch (\Throwable $th) {
-            $this->respond(403, "You aren't authorized to do this.");
+        if (!$_GET['clientId'] || !$_GET['clientSecret'] || !$_GET['botToken'])
+        {
+            try {
+                $data = $this->discord->user->resetBotAuth();
+            } catch (\Throwable $th) {
+                $this->respond(403, "You aren't authorized to do this.");
+            }
         }
 
-        file_put_contents("$this->phproot/metadata/credentials", json_encode(["clientId" => GIFTRON_ID, "clientSecret" => $data->secret, "botToken" => $data->bot->token]));
+        $returndata = json_encode(["clientId" => GIFTRON_ID, "clientSecret" => $data->secret ?: $_GET['clientSecret'], "botToken" => $data->bot->token ?: $_GET['botToken']]);
+        file_put_contents("$this->phproot/metadata/credentials", $returndata);
         if ($internal)
         {
-            return true;
+            return $returndata;
         }
-        $this->respond(200, $this->discord->user->token);
+        $this->respond(200, $returndata);
     }
 
     function storage_read()
