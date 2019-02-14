@@ -98,7 +98,7 @@ class APIhost extends Security
         //Don't freak out, these credentials are public on G2A's documentation.
         $this->g2a = new \G2A\API("qdaiciDiyMaTjxMt", "74026b3dc2c6db6a30a73e71cdb138b1e1b5eb7a97ced46689e2d28db1050875");
         
-        if ($this->session = $this->storage->read("sessions/" . $_COOKIE['session'])->data)
+        if ($_COOKIE['session'] && $this->session = $this->storage->read("sessions/" . $_COOKIE['session'])->data)
         {
             //session exists
             if (time() > $this->session->expires)
