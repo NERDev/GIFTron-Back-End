@@ -69,9 +69,6 @@ abstract class HTTP
     
     static function post($url, $data)
     {
-        if (!strlen($data)) {
-            $headers['Content-Length'] = 0;
-        }
         self::$requests[] = $url;
         $prevobj = debug_backtrace()[1]['object'];
         $tokentype = self::type(explode('/', $prevobj->context)[0]);
@@ -129,11 +126,6 @@ class User extends API
         $this->refreshtoken = $response->refresh_token;
         $this->timeout = ($response->expires_in + time() - ini_get('default_socket_timeout'));
         return (bool)$response;
-    }
-
-    function resetBotAuth()
-    {
-        return HTTP::post('/oauth2/applications/523579896144986125/reset', '');
     }
 
     function guilds()

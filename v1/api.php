@@ -11,7 +11,6 @@ define('SERVER_WELCOME', '533005932079218689');
 define('SERVER_ORDERS', '538825512567439380');
 define('NERDEV', '521130623750897694');
 define('NERDEV_EMPLOYEE', '540647711947358222');
-define('GIFTRON_ID', '523579896144986125');
 
 require_once "libraries/security-lib.php";
 require_once "libraries/discord-lib2.php";
