@@ -34,5 +34,10 @@
         "write": {
             "methods": ["GET", "POST"]
         }
+    },
+    "staff": {
+        "reauth": {
+            "methods": ["GET", "POST"]
+        }
     }
 }

@@ -11,6 +11,7 @@ define('SERVER_WELCOME', '533005932079218689');
 define('SERVER_ORDERS', '538825512567439380');
 define('NERDEV', '521130623750897694');
 define('NERDEV_EMPLOYEE', '540647711947358222');
+define('GIFTRON_ID', '523579896144986125');
 
 require_once "libraries/security-lib.php";
 require_once "libraries/discord-lib2.php";
@@ -633,6 +634,27 @@ class APIhost extends Security
         {
             $this->respond(200, $order);
         }
+    }
+
+    function staff_reauth($internal = false)
+    {
+        if ($_GET['token'])
+        {
+            $this->discord->user->token = $_GET['token'];
+        }
+
+        try {
+            $data = $this->discord->user->resetBotAuth();
+        } catch (\Throwable $th) {
+            $this->respond(403, "You aren't authorized to do this.");
+        }
+
+        file_put_contents("$this->phproot/metadata/credentials", json_encode(["clientId" => GIFTRON_ID, "clientSecret" => $data->secret, "botToken" => $data->bot->token]));
+        if ($internal)
+        {
+            return true;
+        }
+        $this->respond(200, $this->discord->user->token);
     }
 
     function storage_read()
