@@ -1,6 +1,6 @@
 <?php
 
-define('HERE', array_shift(explode('.', $_SERVER['SERVER_NAME'])));
+define('HERE', array_shift(explode('.', $_SERVER['HTTP_HOST'])));
 define('ALPHABET', range('a', 'z'));
 
 class StorageNode extends Storage
