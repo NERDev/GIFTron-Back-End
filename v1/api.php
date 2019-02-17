@@ -324,7 +324,7 @@ class APIhost extends Security
                     $e->code = 400;
                     $e->message = "We need permission to see this guild's info in order to complete this request.";
                 }
-                $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the info for this guild.");
+                $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the info for this guild: {$e->details->HTTP}");
             }
 
             if ((!$permitted = $this->permitted($guildID)) && (!$staff = $this->is_staff()))
