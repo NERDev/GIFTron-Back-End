@@ -398,27 +398,44 @@ class APIhost extends Security
         
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
         {
-            $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "Which guild did you want to configure?");
             $guild = $this->storage->read("guilds/$guildID")->data ?: $this->respond(400, "We don't have this guild on file. Are you sure you have the right ID?");
             $this->permitted($guildID) ?: $this->respond(403, "Hey, don't go configuring guilds without permission. Go ask someone for access.");
             $settings = json_decode(file_get_contents("php://input"));
 
             foreach ($settings as $name => $value)
             {
+                /*
                 if (!in_array($name, array_keys(get_object_vars($guild->settings))))
                 {
+                    var_dump($name, array_keys(get_object_vars($guild->settings)));
                     unset($settings->$name);
                     continue;
                 }
+                */
                 
                 if ($name == "channels")
                 {
                     $settings->$name = (array)$value;
-                    foreach ($settings->$name as $i => $channel)
+                    $settings->$name = filter_var($settings->$name, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $settings->$name;
+                    if ($settings->$name !== false)
                     {
-                        if (!in_array($channel, array_column($this->discord->bot->guilds->$guildID->channels, 'id')))
+                        foreach ($settings->$name as $i => $channel)
                         {
-                            unset($settings->$name[$i]);
+                            if (!in_array($channel, array_column($this->discord->bot->guilds->$guildID->channels, 'id')))
+                            {
+                                unset($settings->$name[$i]);
+                            }
+
+                            if (count($settings->$name))
+                            {
+                                //reindex, stringify
+                                $settings->$name = array_map('strval', array_values($settings->$name));
+                            }
+                            else
+                            {
+                                //no valid channels passed, set to false
+                                $settings->$name = false;
+                            }
                         }
                     }
                     //reindex, stringify
