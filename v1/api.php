@@ -184,6 +184,7 @@ class APIhost extends Security
         //Check if User is attempting to add the bot to a guild
         if ($guildID = strval($_GET['guild_id']))
         {
+            $redirect .= "#dashboard";
             //Make sure it has the correct permissions.
             //Check if bot has already been added, or if this guild even exists.
             if (@$this->discord->bot->guilds->$guildID->info)
@@ -216,7 +217,7 @@ class APIhost extends Security
                         "Attention! <@".$this->user->id."> just added me to " .
                         $this->discord->bot->guilds->$guildID->info->name . "!"
                     ));
-                    $redirect .= "#dashboard?$guildID";
+                    $redirect .= "?$guildID";
                 }
                 else
                 {
@@ -323,8 +324,12 @@ class APIhost extends Security
                 $e = $this->parseException($th);
                 if ($e->details->HTTP == 403)
                 {
-                    $e->code = 400;
-                    $e->message = "We need permission to see this guild's info in order to complete this request.";
+                    //GIFTron was kicked from this server.
+                    $this->respond(200, (object)[
+                        'unavailable' => true,
+                        'icon' => $guild->icon,
+                        'name' => $guild->name
+                    ]);
                 }
                 $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the info for this guild: {$e->details->HTTP}");
             }
