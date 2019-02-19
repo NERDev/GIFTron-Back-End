@@ -386,7 +386,7 @@ class APIhost extends Security
                 $this->storage->write("users/{$this->user->id}", $this->user);
             }
 
-            if ($this->discord->bot->guilds->$guildID->info->icon != $guild->icon || $this->discord->bot->guilds->$guildID->info->name != $guild->name)
+            if ((array)$guild->settings && $this->discord->bot->guilds->$guildID->info->icon != $guild->icon || $this->discord->bot->guilds->$guildID->info->name != $guild->name)
             {
                 //Guild icon or name changed at some point
                 $guild->icon = $this->discord->bot->guilds->$guildID->info->icon;
