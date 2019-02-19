@@ -180,6 +180,7 @@ class APIhost extends Security
             "ip"            => $_SERVER['REMOTE_ADDR']
         ])) setcookie('session', $sessionID, null, '/');
 
+        $redirect = "/giftron";
         //Check if User is attempting to add the bot to a guild
         if ($guildID = strval($_GET['guild_id']))
         {
@@ -215,6 +216,7 @@ class APIhost extends Security
                         "Attention! <@".$this->user->id."> just added me to " .
                         $this->discord->bot->guilds->$guildID->info->name . "!"
                     ));
+                    $redirect .= "#dashboard?$guildID";
                 }
                 else
                 {
@@ -241,7 +243,7 @@ class APIhost extends Security
         //var_dump($this->user);
         $this->storage->write("users/{$this->user->id}", $this->user);
         //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.");
-        $this->redirect("/giftron");
+        $this->redirect($redirect);
     }
 
     function user()
