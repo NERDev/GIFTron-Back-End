@@ -373,7 +373,7 @@ class APIhost extends Security
                     $this->respond($e->code ?: 500, $e->message ?: "We cannot retrieve the channels for this guild.");
                 }
                 
-                if (!$guild->settings->channels) $guildtemp->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, ["giveaway", "giving"]);
+                if ($guild->settings->channels === null) $guildtemp->setup->channels = match_suggested($this->discord->bot->guilds->$guildID->channels, ["giveaway", "giving"]);
                 if ($guild->settings->access_roles === null) $guildtemp->setup->access_roles = match_suggested($this->discord->bot->guilds->$guildID->info->roles, ["owner", "admin"]);
             }
 
@@ -440,8 +440,6 @@ class APIhost extends Security
                             }
                         }
                     }
-                    //reindex, stringify
-                    $settings->$name = array_map('strval', array_values($settings->$name));
                 }
                 elseif ($name == "access_roles")
                 {
