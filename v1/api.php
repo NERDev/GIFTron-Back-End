@@ -524,7 +524,7 @@ class APIhost extends Security
         }
     }
 
-    function guild_channel()
+    function guild_permissions()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
         $entityID = $_SERVER['QUERY_STRING'];
