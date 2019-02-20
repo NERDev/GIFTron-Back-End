@@ -379,6 +379,84 @@ class API
     }
     */
 
+    function get_permissions($member, $guild, $channel)
+    {
+        $permission_calculator = new class {
+            function __construct()
+            {
+                $this->ALL = 2146958847;
+                $this->administrator = 0x8;
+            }
+
+            function compute_base_permissions($member, $guild)
+            {
+                if ($guild->owner_id == $member->id)
+                {
+                    return $this->ALL;
+                }
+
+                $roles = array_combine(array_column($guild->roles, 'id'), $guild->roles);
+                $permissions = $roles[$guild->id]->permissions;
+
+                foreach ($member->roles as $role)
+                {
+                    $permissions += $role->permissions;
+                }
+
+                if ($permissions & $this->administrator)
+                {
+                    return $this->ALL;
+                }
+
+                return $permissions;
+            }
+
+            function compute_overwrites($base_permissions, $member, $channel)
+            {
+                if ($base_permissions & $this->administrator == $this->administrator)
+                {
+                    return $this->all;
+                }
+                $overwrites = array_combine(array_column($channel->permission_overwrites, 'id'), $channel->permission_overwrites);
+
+                $permissions = $base_permissions;
+
+                $overwrite_everyone = $overwrites[$channel->guild_id];
+                if ($overwrite_everyone)
+                {
+                    $permissions &= ~$overwrite_everyone->deny;
+                    $permissions += $overwrite_everyone->allow;
+                }
+
+                $allow = 0;
+                $deny = 0;
+
+                foreach ($member->roles as $role)
+                {
+                    if ($overwrites[$role->id])
+                    {
+                        $deny += $overwrites[$role->id]->deny;
+                        $allow += $overwrites[$role->id]->allow;
+                    }
+                }
+
+
+                $permissions &= ~$deny;
+                $permissions += $allow;
+
+                if ($overwrites[$member->user->id])
+                {
+                    $permissions &= ~$overwrites[$member->user->id]->deny;
+                    $permissions += $overwrites[$member->user->id]->allow;
+                }
+
+                return $permissions;
+            }
+        };
+
+        return $permission_calculator->compute_overwrites($permission_calculator->compute_base_permissions($member, $guild), $member, $channel);
+    }
+
     function list_permissions($permcode)
     {
         $perms = [

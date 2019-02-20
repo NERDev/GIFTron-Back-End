@@ -146,6 +146,16 @@ class APIhost extends Security
         }
 
         isset($_GET['code']) ?: $this->respond(400, "A code is needed to login");
+        if ($guildID = strval($_GET['guild_id']))
+        {
+            try {
+                $this->discord->bot->guilds->$guildID->info;
+            } catch (\Throwable $th) {
+                //first attempt failed, bot was not in this guild prior to code execution
+                $newGuild = true;
+            }
+        }
+
         try {
             $this->discord->user->auth($_GET['code']) ?: $this->respond(400, "Invalid Code");
         } catch (\Throwable $th) {
@@ -184,58 +194,60 @@ class APIhost extends Security
         //Check if User is attempting to add the bot to a guild
         if ($guildID = strval($_GET['guild_id']))
         {
-            $redirect .= "#dashboard";
+            $redirect .= "#dashboard?$guildID";
             //Make sure it has the correct permissions.
             //Check if bot has already been added, or if this guild even exists.
-            if (@$this->discord->bot->guilds->$guildID->info)
+            try {
+                $this->discord->bot->guilds->$guildID->info;
+            } catch (\Throwable $th) {
+                //second attempt failed, bot is still not in this guild... wtf
+                $this->respond(420, "wtf brah");
+            }
+
+            //Bot is verifiably added to this guild.
+            if (!$this->storage->read("guilds/$guildID"))
             {
-                //Bot is verifiably added to this guild.
+                //Add guild to User's list, and instantiate it.
 
-                if (!$this->storage->read("guilds/$guildID"))
+                $this->user->guilds->$guildID = true;
+                
+                $this->storage->write("guilds/$guildID", [
+                    //"users"     => [$this->user->id],
+                    "settings"     => [
+                        "channels"     => null,
+                        "access_roles" => null,
+                        "strict"       => false,
+                        "max"          => 5,
+                        "min"          => 1
+                    ],
+                    "wallet"       => 0,
+                    "giveaways"    => [],
+                    "name"         => $this->discord->bot->guilds->$guildID->info->name,
+                    "icon"         => $this->discord->bot->guilds->$guildID->info->icon
+                ]);
+
+                //Alert to the welcome channel that we have a new member
+                var_dump("addnew", @$this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                    "Attention! <@".$this->user->id."> just added me to " .
+                    $this->discord->bot->guilds->$guildID->info->name . "!"
+                ));
+            }
+            else
+            {
+                if ($newGuild)
                 {
-                    //Add guild to User's list, and instantiate it.
-
-                    $this->user->guilds->$guildID = true;
-                    
-                    $this->storage->write("guilds/$guildID", [
-                        //"users"     => [$this->user->id],
-                        "settings"     => [
-                            "channels"     => null,
-                            "access_roles" => null,
-                            "strict"       => false,
-                            "max"          => 5,
-                            "min"          => 1
-                        ],
-                        "wallet"       => 0,
-                        "giveaways"    => [],
-                        "name"         => $this->discord->bot->guilds->$guildID->info->name,
-                        "icon"         => $this->discord->bot->guilds->$guildID->info->icon
-                    ]);
-
-                    //Alert to the welcome channel that we have a new member
-                    var_dump("addnew", @$this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
-                        "Attention! <@".$this->user->id."> just added me to " .
-                        $this->discord->bot->guilds->$guildID->info->name . "!"
-                    ));
-                    $redirect .= "?$guildID";
-                }
-                else
-                {
-                    /*
                     var_dump("addback", $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
                         "Attention! <@".$this->user->id."> just added me back to " .
                         $this->discord->bot->guilds->$guildID->info->name . "!"
                     ));
-                    */
                 }
-            }
-            else
-            {
-                //Bot has been removed from this guild.
-                @$this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
-                    "Uh oh! <@".$this->user->id."> just tried to add me to $guildID, but I'm not in that guild.
-                    Something's wrong."
-                );
+                else
+                {
+                    var_dump("addback", $this->discord->bot->channels->{SERVER_WELCOME}->postMessage(
+                        "LOL! <@".$this->user->id."> just tried adding me to " .
+                        $this->discord->bot->guilds->$guildID->info->name . ", even though I'm already there!"
+                    ));
+                }
             }
         }
 
@@ -510,6 +522,34 @@ class APIhost extends Security
             //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
             $this->respond(200, $guild);
         }
+    }
+
+    function guild_channel()
+    {
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        $channelID = $_GET['channel_id'];
+
+        try {
+            $channel = $this->discord->bot->channels->$channelID->info;
+            $guildID = $channel->guild_id;
+        } catch (\Throwable $th) {
+            $this->respond(200, false);
+        }
+
+        try {
+            $member = $this->discord->bot->guilds->$guildID->members->{$this->discord->bot->info->id}->info;
+        } catch (\Throwable $th) {
+            $this->respond(200, false);
+        }
+
+        try {
+            $guild = $this->discord->bot->guilds->$guildID->info;
+        } catch (\Throwable $th) {
+            $this->respond(200, false);
+        }
+
+        $this->respond(200, $this->discord->list_permissions($this->discord->get_permissions($member, $guild, $channel)));
+        exit;
     }
 
     function guild_schedule_giveaway()

@@ -18,6 +18,9 @@
             },
             "methods": ["GET"]
         },
+        "channel": {
+            "methods": ["GET"]
+        },
         "wallet": {
             "methods": ["GET", "PUT"]
         },
