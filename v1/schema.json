@@ -18,7 +18,7 @@
             },
             "methods": ["GET"]
         },
-        "channel": {
+        "permissions": {
             "methods": ["GET"]
         },
         "wallet": {

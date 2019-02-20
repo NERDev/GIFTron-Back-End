@@ -124,14 +124,14 @@ class APIhost extends Security
     function user_auth()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
-
+        $asking = 3072;
         //Check if asking for an OAuth2 URL
         if (count($_GET) == 1 && isset($_GET['scope']))
         {
             $scope = $_GET['scope'];
             $parts = [
                 "client_id" => \DiscordLib\HTTP::$clientId,
-                "permissions" => 3072,
+                "permissions" => $asking,
                 "redirect_uri" => "http".(!boolval($_SERVER['HTTPS'])?"s":"")."://".$_SERVER['SERVER_NAME'].$_SERVER['URL'],
                 "response_type" => "code",
                 "scope" => $scope
@@ -527,13 +527,35 @@ class APIhost extends Security
     function guild_channel()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
-        $channelID = $_GET['channel_id'];
+        $entityID = $_SERVER['QUERY_STRING'];
 
         try {
-            $channel = $this->discord->bot->channels->$channelID->info;
+            $channel = $this->discord->bot->channels->$entityID->info;
             $guildID = $channel->guild_id;
         } catch (\Throwable $th) {
-            $this->respond(200, false);
+            try {
+                $guild = $this->discord->bot->guilds->$entityID->info;
+                foreach ($guild->roles as $role)
+                {
+                    if ($role->managed)
+                    {
+                        $permissions = $role->permissions;
+                        break;
+                    }
+                }
+                $this->respond(200, $this->discord->list_permissions($permissions));
+            } catch (\Throwable $th) {
+                $this->respond(200, false);
+            }
+        }
+
+        if (!$guild)
+        {
+            try {
+                $guild = $this->discord->bot->guilds->$guildID->info;
+            } catch (\Throwable $th) {
+                $this->respond(200, false);
+            }
         }
 
         try {
@@ -542,14 +564,7 @@ class APIhost extends Security
             $this->respond(200, false);
         }
 
-        try {
-            $guild = $this->discord->bot->guilds->$guildID->info;
-        } catch (\Throwable $th) {
-            $this->respond(200, false);
-        }
-
         $this->respond(200, $this->discord->list_permissions($this->discord->get_permissions($member, $guild, $channel)));
-        exit;
     }
 
     function guild_schedule_giveaway()
