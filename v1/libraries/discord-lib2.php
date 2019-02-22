@@ -87,6 +87,27 @@ abstract class HTTP
         $headers['HTTP'] = intval($headers['HTTP']);
         throw new \Exception(json_encode($headers));
     }
+    
+    static function patch($url, $data)
+    {
+        self::$requests[] = $url;
+        $prevobj = debug_backtrace()[1]['object'];
+        $tokentype = self::type(explode('/', $prevobj->context)[0]);
+        $tokentype && $headers['Authorization'] = "$tokentype {$prevobj->token}";
+        $headers['Content-Type'] = "application/" . (json_decode($data) ? 'json' : 'x-www-form-urlencoded');
+        $response = json_decode(file_get_contents(self::$baseURL.$url, false, stream_context_create([
+            'http' => [
+                'header'  => self::buildHeaders($headers),
+                'method'  => 'PATCH',
+                'content' => $data,
+            ]
+        ])));
+        $headers = self::parseHeaders($http_response_header);
+        if (substr($headers['HTTP'], 0, 1) == 2) return $response;
+        if (!$headers) $headers['HTTP'] = 0;
+        $headers['HTTP'] = intval($headers['HTTP']);
+        throw new \Exception(json_encode($headers));
+    }
 }
 
 class User extends API
@@ -156,6 +177,11 @@ class Channel
     function info()
     {
         return HTTP::get("/channels/$this->id");
+    }
+
+    function modify($settings)
+    {
+        return HTTP::patch("/channels/$this->id", json_encode($settings));
     }
 
     function postMessage($message)
