@@ -124,7 +124,7 @@ class APIhost extends Security
     function user_auth()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
-        $asking = 3088;
+        $asking = 268438528;
         //Check if asking for an OAuth2 URL
         if (count($_GET) == 1 && isset($_GET['scope']))
         {
@@ -527,48 +527,93 @@ class APIhost extends Security
     function guild_permissions()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
+
+        $guildID = $_GET['guild_id'];
+        $channelID = $_GET['channel_id'];
         $entityID = $_SERVER['QUERY_STRING'];
 
-        try {
-            $channel = $this->discord->bot->channels->$entityID->info;
-            $guildID = $channel->guild_id;
-        } catch (\Throwable $th) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST')
+        {
+            if ($guildID)
+            {
+                $entityID = $guildID;
+                $type = 'guilds';
+            }
+            else if ($channelID)
+            {
+                $entityID = $channelID;
+                $type = 'channels';
+            }
+            else
+            {
+                $this->respond(400, "Undefined entity type");
+            }
+
+            $settings = json_decode(file_get_contents("php://input"));
+            
             try {
-                $guild = $this->discord->bot->guilds->$entityID->info;
-                foreach ($guild->roles as $role)
-                {
-                    if ($role->managed)
-                    {
-                        $permissions = $role->permissions;
-                        break;
-                    }
-                }
-                $this->respond(200, $this->discord->list_permissions($permissions));
+                $this->respond(200, $this->discord->bot->$type->$entityID->modify($settings));
             } catch (\Throwable $th) {
-                $this->respond(200, false);
+                $e = $this->parseException($th);
+                if ($e->details->HTTP == 403)
+                {
+                    $e->code = 400;
+                    $e->message = "We need permission to manage this guild's roles in order to complete this request.";
+                }
+                $this->respond($e->code ?: 500, $e->message ?: "We cannot manage the roles for this guild.");
             }
         }
 
-        if (!$guild)
+        if ($_SERVER['REQUEST_METHOD'] == 'GET')
         {
             try {
-                $guild = $this->discord->bot->guilds->$guildID->info;
+                $channel = $this->discord->bot->channels->$entityID->info;
+                $guildID = $channel->guild_id;
+            } catch (\Throwable $th) {
+                try {
+                    $guild = $this->discord->bot->guilds->$entityID->info;
+                    foreach ($guild->roles as $role)
+                    {
+                        if ($role->managed)
+                        {
+                            $permissions = $role->permissions;
+                            break;
+                        }
+                    }
+                    $this->respond(200, $this->discord->list_permissions($permissions));
+                } catch (\Throwable $th) {
+                    $this->respond(200, false);
+                }
+            }
+    
+            if (!$guild)
+            {
+                try {
+                    $guild = $this->discord->bot->guilds->$guildID->info;
+                } catch (\Throwable $th) {
+                    $this->respond(200, false);
+                }
+            }
+    
+            try {
+                $member = $this->discord->bot->guilds->$guildID->members->{$this->discord->bot->info->id}->info;
             } catch (\Throwable $th) {
                 $this->respond(200, false);
             }
+    
+            //var_dump("We hit discord " . count(\DiscordLib\HTTP::$requests) . " times.", \DiscordLib\HTTP::$requests);
+            $this->respond(200, $this->discord->list_permissions($this->discord->get_permissions($member, $guild, $channel)) ?: []);
         }
-
-        try {
-            $member = $this->discord->bot->guilds->$guildID->members->{$this->discord->bot->info->id}->info;
-        } catch (\Throwable $th) {
-            $this->respond(200, false);
-        }
-
-        $this->respond(200, $this->discord->list_permissions($this->discord->get_permissions($member, $guild, $channel)));
     }
 
     function guild_schedule_giveaway()
     {
+        try {
+            $this->discord->bot->channels->{536269227188027392}->postMessage("kek");
+        } catch (\Throwable $th) {
+            $this->respond(500, "We could not alert our team about your order! Please contact them IMMEDIATELY!");
+        }
+        exit;
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
         {
             $guildID = $_SERVER['QUERY_STRING'];

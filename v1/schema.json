@@ -19,12 +19,12 @@
             "methods": ["GET"]
         },
         "permissions": {
-            "methods": ["GET"]
+            "methods": ["GET", "POST"]
         },
         "wallet": {
             "methods": ["GET", "PUT"]
         },
-        "methods": ["GET", "POST", "HEAD"]
+        "methods": ["GET", "POST"]
     },
     "order": {
         "methods": ["GET", "POST"]
