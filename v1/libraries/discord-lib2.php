@@ -439,7 +439,7 @@ class API
 
             function compute_overwrites($base_permissions, $member, $channel)
             {
-                if ($base_permissions & $this->administrator == $this->administrator)
+                if (($base_permissions & $this->administrator) == $this->administrator)
                 {
                     return $this->ALL;
                 }
