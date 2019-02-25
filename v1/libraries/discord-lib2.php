@@ -441,8 +441,9 @@ class API
             {
                 if ($base_permissions & $this->administrator == $this->administrator)
                 {
-                    return $this->all;
+                    return $this->ALL;
                 }
+
                 $overwrites = array_combine(array_column($channel->permission_overwrites, 'id'), $channel->permission_overwrites);
 
                 $permissions = $base_permissions;
