@@ -124,7 +124,7 @@ class APIhost extends Security
     function user_auth()
     {
         //error_reporting(E_ALL); ini_set('display_errors', 1);
-        $asking = 268438528;
+        $asking = 268438544;
         //Check if asking for an OAuth2 URL
         if (count($_GET) == 1 && isset($_GET['scope']))
         {
