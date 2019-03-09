@@ -55,7 +55,7 @@ class Giveaway
 
         if (!$this->key && !$this->game_id)
         {
-            $missing[] = implode("key or game ID");
+            $missing[] = "key or game ID";
         }
 
         foreach (get_class_vars(RequiredGiveawayParams) as $key => $value)
@@ -608,15 +608,10 @@ class APIhost extends Security
 
     function guild_schedule_giveaway()
     {
-        try {
-            $this->discord->bot->channels->{536269227188027392}->postMessage("kek");
-        } catch (\Throwable $th) {
-            $this->respond(500, "We could not alert our team about your order! Please contact them IMMEDIATELY!");
-        }
-        exit;
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
         {
-            $guildID = $_SERVER['QUERY_STRING'];
+            $this->user ?: $this->respond(401, "Please log in.");
+            $guildID = $_SERVER['QUERY_STRING'] ?: $this->respond(400, "We need to know what guild you want to schedule a giveaway for.");
             $guild = $this->storage->read("guilds/$guildID")->data;
             
             $channelnum = count($guild->settings->channels);
@@ -637,17 +632,17 @@ class APIhost extends Security
             ];
 
             try {
-                $giveaway = new Giveaway(array_merge($autodata, $_POST));
+                $giveaway = new Giveaway(array_merge($autodata, (array) json_decode(file_get_contents("php://input"))));
             } catch (Exception $e) {
                 $this->respond(400, "You are missing the following parameters: {$e->getMessage()}");
             }
-            
-            $id = md5(uniqid(random_int(0,999), TRUE));
             
             if (!in_array($giveaway->channel, $guild->settings->channels))
             {
                 $this->respond(400, "You can't schedule a Giveaway for a channel that's not setup for it.");
             }
+
+            $id = "$giveaway->end-$giveaway->start-" . random_int(0,9999999999);
             
             if ($giveaway->key)
             {
