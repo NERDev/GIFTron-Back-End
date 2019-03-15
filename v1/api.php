@@ -42,6 +42,11 @@ class Giveaway
     {
         $this->visible = true;
         $this->recurring = false;
+        if ($params['recurring'])
+        {
+            isset($params['count']) && $this->count = $params['count'] - 1;
+            $this->beginning = $params['start'];
+        }
 
         $params = array_intersect_key($params, get_object_vars($this));
         foreach ($params as $param => $value)
@@ -51,7 +56,6 @@ class Giveaway
                             filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE) ??
                             filter_var($value, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
         }
-
 
         if (!$this->key && !$this->game_id)
         {
