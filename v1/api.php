@@ -289,7 +289,7 @@ class APIhost extends Security
                 $this->respond($e->code ?: 501, $e->message ?: "We cannot retrieve the guilds for this user.");
             }
             $discordguilds = array_column($this->discord->user->guilds, 'id');
-            $this->respond(200, (array)$this->user->guilds + array_combine($discordguilds, array_fill(0, count($discordguilds), false)));
+            $this->respond(200, array_combine($discordguilds, array_fill(0, count($discordguilds), false)));
         }
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
