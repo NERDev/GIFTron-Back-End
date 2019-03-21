@@ -113,6 +113,7 @@ class APIhost extends Security
                 } catch (\Throwable $th) {
                     setcookie('session', null, -1, '/');
                     $this->respond(400, "Reauthorization failure");
+                    file_put_contents("../../../../logs/auth/" . microtime(true), json_encode($th));
                 }
                 $this->session->token = $this->discord->user->token;
                 $this->session->refreshtoken = $this->discord->user->refreshtoken;
@@ -289,7 +290,8 @@ class APIhost extends Security
                 $this->respond($e->code ?: 501, $e->message ?: "We cannot retrieve the guilds for this user.");
             }
             $discordguilds = array_column($this->discord->user->guilds, 'id');
-            $this->respond(200, array_combine($discordguilds, array_fill(0, count($discordguilds), false)));
+            $discordguildsfill = array_combine($discordguilds, array_fill(0, count($discordguilds), false));            
+            $this->respond(200, array_intersect_key((array)$this->user->guilds + $discordguildsfill, $discordguildsfill));
         }
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST')
